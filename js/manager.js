@@ -176,7 +176,7 @@ document.addEventListener('click', e => {
 /* ============================================================
    PAGINATION SYSTEM
    ============================================================ */
-class Paginator {
+const ActivePaginator = window.Paginator || class ManagerPaginator {
   constructor(data, containerId, renderFn, options = {}) {
     this.data = data;
     this.containerId = containerId;
@@ -327,7 +327,7 @@ function createPaginator(tableId, data, renderFn, options = {}) {
   if (paginators[tableId]) {
     paginators[tableId].updateData(data);
   } else {
-    paginators[tableId] = new Paginator(data, tableId, renderFn, options);
+   paginators[tableId] = new ActivePaginator(data, tableId, renderFn, options);
   }
   return paginators[tableId];
 }
