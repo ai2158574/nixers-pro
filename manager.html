@@ -1,1 +1,1847 @@
 
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Nixers Pro | Enterprise Manager Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+ <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="css/dashboard.css">
+<link rel="stylesheet" href="css/manager.css">
+</head>
+<body>
+
+<!-- ===================== SIDEBAR ===================== -->
+<div class="sidebar" id="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-mark">N</div>
+    <div>
+      <h2>NIXERS<span>.pro</span></h2>
+      <small>Enterprise Manager</small>
+    </div>
+  </div>
+
+  <div class="sb-nav" id="sbNav">
+
+    <!-- OVERVIEW -->
+    <div class="nav-section-label">Overview</div>
+    <a data-page="dashboard" class="active"><i class="fas fa-gauge-high"></i> Dashboard</a>
+    <a data-page="analytics"><i class="fas fa-chart-bar"></i> Analytics</a>
+    <a data-page="reports"><i class="fas fa-file-chart-column"></i> Reports</a>
+
+    <!-- PEOPLE -->
+    <div class="nav-section-label">People</div>
+    <a data-page="users"><i class="fas fa-users"></i> Users <span class="nb" id="nbUsers" style="display:none">0</span></a>
+    <a data-page="leave"><i class="fas fa-calendar-check"></i> Leave Management</a>
+    <a data-page="timesheets"><i class="fas fa-clock"></i> Timesheets</a>
+    <a data-page="payroll"><i class="fas fa-money-bill-wave"></i> Payroll Preview</a>
+
+    <!-- WORK -->
+    <div class="nav-section-label">Work</div>
+    <a data-page="tasks"><i class="fas fa-list-check"></i> Tasks &amp; Projects</a>
+    <a data-page="shifts"><i class="fas fa-calendar-week"></i> Shift Scheduling</a>
+    <a data-page="equipment"><i class="fas fa-toolbox"></i> Equipment &amp; Inventory</a>
+
+    <!-- SITES -->
+    <div class="nav-section-label">Sites</div>
+    <a data-page="sites"><i class="fas fa-building"></i> Sites</a>
+
+    <!-- CONTENT -->
+    <div class="nav-section-label">Content</div>
+    <a data-page="posts"><i class="fas fa-newspaper"></i> Posts</a>
+    <a data-page="documents"><i class="fas fa-folder-open"></i> Documents</a>
+    <a data-page="categories"><i class="fas fa-tags"></i> Categories</a>
+
+    <!-- COMMUNICATION -->
+    <div class="nav-section-label">Communication</div>
+    <a data-page="messages"><i class="fas fa-comments"></i> Messages <span class="nb red" id="nbMsgs">3</span></a>
+    <a data-page="notifications"><i class="fas fa-bell"></i> Notifications <span class="nb" id="nbNotifs" style="display:none">0</span></a>
+    <a data-page="emailcenter"><i class="fas fa-envelope-open-text"></i> Email Center</a>
+
+    <!-- COMPLIANCE -->
+    <div class="nav-section-label">Compliance</div>
+    <a data-page="safety"><i class="fas fa-shield-halved"></i> Safety &amp; Incidents</a>
+    <a data-page="auditlog"><i class="fas fa-scroll"></i> Audit Log</a>
+
+    <!-- SYSTEM -->
+    <div class="nav-section-label">System</div>
+    <a data-page="clientportal"><i class="fas fa-briefcase"></i> Client Portal</a>
+    <a data-page="settings"><i class="fas fa-gear"></i> Settings</a>
+
+  </div>
+
+  <div class="sb-bottom">
+    <div class="sb-admin-card" id="sbAdminCard">
+      <div id="sbAvatar" class="u-av" style="width:36px;height:36px;font-size:0.82rem;background:rgba(234,179,8,0.2);color:var(--accent);">A</div>
+      <div class="sb-admin-info">
+        <div class="name" id="sbName">Admin</div>
+        <small>Super Administrator</small>
+      </div>
+      <i class="fas fa-chevron-right" style="color:var(--text3);font-size:0.7rem;"></i>
+    </div>
+  </div>
+</div>
+
+<div class="sidebar-ov" id="sidebarOv"></div>
+
+<!-- ===================== MAIN ===================== -->
+<div class="main" id="main">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <button class="ib" id="menuBtn"><i class="fas fa-bars"></i></button>
+    <span class="topbar-title" id="pageTitle">Dashboard</span>
+
+    <div class="tb-search">
+      <i class="fas fa-search"></i>
+      <input type="text" id="globalSearch" placeholder="Search… (Ctrl+K)">
+    </div>
+
+    <!-- Impersonation banner -->
+    <div id="impersonateBanner" class="impersonate-banner" style="display:none;">
+      <i class="fas fa-user-secret"></i> Viewing as: <strong id="impersonateName">-</strong>
+      <button onclick="exitImpersonate()"><i class="fas fa-times"></i> Exit</button>
+    </div>
+
+    <div class="tb-actions">
+      <button class="theme-btn" id="themeBtn" title="Toggle Theme"><i class="fas fa-moon"></i></button>
+      <div class="ib" title="Notifications" id="notifBtn"><i class="fas fa-bell"></i><span class="dot" id="notifDot" style="display:none;"></span></div>
+      <div class="ib" title="Messages" id="msgTopBtn"><i class="fas fa-envelope"></i></div>
+      <div style="position:relative;">
+        <div class="top-avatar" id="topAvatar">A</div>
+        <div class="profile-dropdown" id="profileDropdown">
+          <div class="pd-head">
+            <div class="pd-av" id="pdAvatar" style="background:rgba(234,179,8,0.2);color:var(--accent);">A</div>
+            <div>
+              <div style="font-weight:600;font-size:0.83rem;" id="pdName">Admin</div>
+              <div style="font-size:0.7rem;color:var(--text3);">Super Admin</div>
+            </div>
+          </div>
+          <div class="pd-item" id="pdMyProfile"><i class="fas fa-user"></i> My Profile</div>
+          <div class="pd-item" id="pdMyIdCard"><i class="fas fa-id-card"></i> My ID Card</div>
+          <div class="pd-item" id="pdSettings"><i class="fas fa-gear"></i> Settings</div>
+          <hr class="div" style="margin:0.3rem 0;">
+          <div class="pd-item danger" id="pdLogout"><i class="fas fa-sign-out-alt"></i> Logout</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE CONTENT -->
+  <div class="page-content">
+
+    <!-- ========== DASHBOARD ========== -->
+    <div id="page-dashboard">
+      <!-- Pending approvals widget -->
+      <div class="pending-bar" id="pendingBar" style="display:none;">
+        <i class="fas fa-clock"></i>
+        <span id="pendingBarText">Pending approvals</span>
+        <div style="margin-left:auto;display:flex;gap:0.5rem;" id="pendingBarActions"></div>
+      </div>
+
+      <div class="stat-grid" id="statsGrid"></div>
+
+      <div class="dash-quick-actions" id="dashQuickActions">
+        <button class="btn btn-accent btn-sm" id="qaAddUser"><i class="fas fa-user-plus"></i> Add User</button>
+        <button class="btn btn-outline btn-sm" id="qaCreatePost"><i class="fas fa-pen"></i> Create Post</button>
+        <button class="btn btn-outline btn-sm" id="qaNewTask"><i class="fas fa-plus"></i> New Task</button>
+        <button class="btn btn-outline btn-sm" id="qaAddSite"><i class="fas fa-building"></i> Add Site</button>
+      </div>
+
+      <div class="charts-grid">
+        <div class="panel">
+          <div class="panel-hdr">
+            <h5><i class="fas fa-chart-column"></i>Task Overview</h5>
+            <div style="display:flex;gap:0.4rem;">
+              <button class="btn btn-sm btn-outline crb active" data-r="weekly">Weekly</button>
+              <button class="btn btn-sm btn-outline crb" data-r="monthly">Monthly</button>
+            </div>
+          </div>
+          <div class="panel-body" style="padding-top:0.75rem;"><canvas id="mainChart" height="230"></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="panel-hdr"><h5><i class="fas fa-circle-half-stroke"></i>Roles</h5></div>
+          <div class="panel-body" style="padding-top:0.75rem;"><canvas id="roleChart" height="230"></canvas></div>
+        </div>
+      </div>
+
+      <div class="charts-grid2">
+        <div class="panel">
+          <div class="panel-hdr"><h5><i class="fas fa-list-check"></i>Task Status</h5></div>
+          <div class="panel-body" style="padding-top:0.75rem;"><canvas id="taskChart" height="190"></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="panel-hdr"><h5><i class="fas fa-rss"></i>Recent Activity</h5></div>
+          <div class="panel-body" id="actFeed" style="max-height:240px;overflow-y:auto;padding-top:0.5rem;"></div>
+        </div>
+      </div>
+
+      <!-- System health -->
+      <div class="panel" style="margin-bottom:1.1rem;">
+        <div class="panel-hdr"><h5><i class="fas fa-server"></i>System Health</h5></div>
+        <div class="panel-body">
+          <div class="sys-health-grid" id="sysHealthGrid"></div>
+        </div>
+      </div>
+
+      <!-- Recent audit log on dashboard -->
+      <div class="panel">
+        <div class="panel-hdr">
+          <h5><i class="fas fa-scroll"></i>Recent Audit Log</h5>
+          <button class="btn btn-outline btn-sm" id="dashAuditMore">View All</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="dt">
+            <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Target</th><th>IP</th></tr></thead>
+            <tbody id="dashAuditBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== ANALYTICS ========== -->
+    <div id="page-analytics" style="display:none;">
+      <div class="stat-grid" id="anStatsGrid"></div>
+      <div class="charts-grid2" style="margin-bottom:1.1rem;">
+        <div class="panel">
+          <div class="panel-hdr">
+            <h5><i class="fas fa-chart-line"></i>Monthly Task Trend</h5>
+            <select class="finp btn-sm" id="anYear" style="width:auto;"><option>2025</option><option>2024</option></select>
+          </div>
+          <div class="panel-body" style="padding-top:0.5rem;"><canvas id="anMonthly" height="220"></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="panel-hdr"><h5><i class="fas fa-chart-pie"></i>Task Breakdown</h5></div>
+          <div class="panel-body" style="padding-top:0.5rem;"><canvas id="anStatus" height="220"></canvas></div>
+        </div>
+      </div>
+      <div class="charts-grid2">
+        <div class="panel">
+          <div class="panel-hdr"><h5><i class="fas fa-trophy"></i>Top Performers</h5></div>
+          <div class="panel-body" id="topPerf" style="padding-top:0.5rem;"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-hdr"><h5><i class="fas fa-hard-hat"></i>Site Progress</h5></div>
+          <div class="panel-body" style="padding-top:0.5rem;"><canvas id="anSites" height="200"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== REPORTS ========== -->
+    <div id="page-reports" style="display:none;">
+      <div class="filter-bar">
+        <select class="finp" id="rptType" style="min-width:180px;">
+          <option value="leave">Leave Summary</option>
+          <option value="documents">Document Completion</option>
+          <option value="activity">User Activity</option>
+          <option value="payroll">Payroll Cost</option>
+          <option value="tasks">Task Completion</option>
+          <option value="safety">Safety Incidents</option>
+        </select>
+        <input type="date" class="finp" id="rptFrom">
+        <input type="date" class="finp" id="rptTo">
+        <button class="btn btn-accent btn-sm" id="rptGenerate"><i class="fas fa-play"></i> Generate</button>
+        <button class="btn btn-outline btn-sm" id="rptExport"><i class="fas fa-download"></i> Export CSV</button>
+        <button class="btn btn-outline btn-sm" id="rptPrint"><i class="fas fa-print"></i> Print</button>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr"><h5><i class="fas fa-file-chart-column"></i>Report Output</h5></div>
+        <div class="panel-body" id="rptOutput">
+          <div class="empty-state"><i class="fas fa-chart-bar"></i><div>Select a report type and click Generate</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== USERS ========== -->
+    <div id="page-users" style="display:none;">
+      <div class="filter-bar">
+        <input type="text" class="finp" id="fName" placeholder="🔍 Name..." style="flex:2;min-width:130px;">
+        <input type="text" class="finp" id="fEmail" placeholder="📧 Email..." style="flex:2;min-width:130px;">
+        <input type="text" class="finp" id="fPhone" placeholder="📞 Phone..." style="min-width:110px;">
+        <select class="finp" id="fRole" style="min-width:110px;">
+          <option value="">All Roles</option>
+          <option value="admin">Admin</option>
+          <option value="manager">Manager</option>
+          <option value="worker">Worker</option>
+        </select>
+        <select class="finp" id="fStatus" style="min-width:110px;">
+          <option value="">All Status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+          <option value="pending">Pending</option>
+        </select>
+        <button class="btn btn-outline btn-sm" id="resetF" title="Reset"><i class="fas fa-rotate-left"></i></button>
+        <button class="btn btn-outline btn-sm" id="csvImportBtn" title="Import CSV"><i class="fas fa-upload"></i> Import</button>
+        <input type="file" id="csvImportFile" accept=".csv" style="display:none;">
+        <button class="btn btn-accent btn-sm" id="addUserBtn"><i class="fas fa-plus"></i> Add User</button>
+      </div>
+
+      <!-- Tabs: All / Pending -->
+      <div class="tabs" style="margin-bottom:0.75rem;">
+        <button class="tab-btn active" data-utab="all">All Users</button>
+        <button class="tab-btn" data-utab="pending">Pending Approval <span class="nb" id="pendingCount" style="display:none;">0</span></button>
+      </div>
+
+      <!-- Bulk actions bar -->
+      <div class="bulk-bar" id="bulkBar" style="display:none;">
+        <span id="bulkCount">0 selected</span>
+        <button class="btn btn-sm btn-outline" id="bulkActivate"><i class="fas fa-check"></i> Activate</button>
+        <button class="btn btn-sm btn-outline" id="bulkDeactivate"><i class="fas fa-ban"></i> Deactivate</button>
+        <button class="btn btn-sm btn-danger" id="bulkDelete"><i class="fas fa-trash"></i> Delete</button>
+        <button class="btn btn-sm btn-outline" id="bulkClear"><i class="fas fa-times"></i> Clear</button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-hdr">
+          <h5><i class="fas fa-users"></i>All Users</h5>
+          <span id="uCount" style="font-size:0.78rem;color:var(--text3);"></span>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="dt">
+            <thead>
+              <tr>
+                <th><input type="checkbox" id="selectAll"></th>
+                <th>#</th><th>User</th><th>Email</th><th>Phone</th>
+                <th>Role</th><th>Dept</th><th>Status</th>
+                <th>Online</th><th>Registered</th><th>Last Login</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="uTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== LEAVE MANAGEMENT ========== -->
+    <div id="page-leave" style="display:none;">
+      <div class="filter-bar">
+        <select class="finp" id="lvStatus" style="min-width:140px;">
+          <option value="">All Status</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+        <select class="finp" id="lvType" style="min-width:140px;">
+          <option value="">All Types</option>
+          <option value="annual">Annual</option>
+          <option value="sick">Sick</option>
+          <option value="emergency">Emergency</option>
+          <option value="unpaid">Unpaid</option>
+        </select>
+        <input type="date" class="finp" id="lvFrom">
+        <input type="date" class="finp" id="lvTo">
+        <button class="btn btn-outline btn-sm" id="lvExport"><i class="fas fa-download"></i> Export</button>
+      </div>
+
+      <div class="tabs">
+        <button class="tab-btn active" data-lvtab="requests">Leave Requests</button>
+        <button class="tab-btn" data-lvtab="balances">Leave Balances</button>
+        <button class="tab-btn" data-lvtab="calendar">Calendar</button>
+        <button class="tab-btn" data-lvtab="holidays">Public Holidays</button>
+      </div>
+
+      <div id="lv-requests">
+        <div class="panel">
+          <div class="panel-hdr"><h5><i class="fas fa-calendar-check"></i>Leave Requests</h5></div>
+          <div style="overflow-x:auto;">
+            <table class="dt">
+              <thead><tr><th>Employee</th><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th><th>Applied</th><th>Actions</th></tr></thead>
+              <tbody id="lvTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="lv-balances" style="display:none;">
+        <div class="panel">
+          <div class="panel-hdr"><h5><i class="fas fa-balance-scale"></i>Leave Balances</h5></div>
+          <div style="overflow-x:auto;">
+            <table class="dt">
+              <thead><tr><th>Employee</th><th>Annual Remaining</th><th>Sick Remaining</th><th>Emergency</th><th>Unpaid Used</th><th>Total Taken</th></tr></thead>
+              <tbody id="lvBalTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="lv-calendar" style="display:none;">
+        <div class="panel">
+          <div class="panel-hdr">
+            <h5><i class="fas fa-calendar"></i>Leave Calendar</h5>
+            <div style="display:flex;gap:0.4rem;align-items:center;">
+              <button class="abt" id="lvCalPrev"><i class="fas fa-chevron-left"></i></button>
+              <span id="lvCalLabel" style="font-weight:600;font-size:0.88rem;min-width:120px;text-align:center;"></span>
+              <button class="abt" id="lvCalNext"><i class="fas fa-chevron-right"></i></button>
+            </div>
+          </div>
+          <div class="panel-body" id="lvCalBody"></div>
+        </div>
+      </div>
+
+      <div id="lv-holidays" style="display:none;">
+        <div class="panel">
+          <div class="panel-hdr">
+            <h5><i class="fas fa-star"></i>Public Holidays</h5>
+            <button class="btn btn-accent btn-sm" id="addHolidayBtn"><i class="fas fa-plus"></i> Add</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="dt">
+              <thead><tr><th>Date</th><th>Name</th><th>Type</th><th>Actions</th></tr></thead>
+              <tbody id="holidayTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== TIMESHEETS ========== -->
+    <div id="page-timesheets" style="display:none;">
+      <div class="filter-bar">
+        <select class="finp" id="tsUser" style="min-width:160px;"><option value="">All Employees</option></select>
+        <select class="finp" id="tsWeek" style="min-width:160px;"></select>
+        <select class="finp" id="tsStatus2" style="min-width:130px;">
+          <option value="">All Status</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+        <button class="btn btn-outline btn-sm" id="tsExport"><i class="fas fa-download"></i> Export</button>
+      </div>
+      <div class="stat-grid" id="tsStats" style="margin-bottom:1.1rem;"></div>
+      <div class="panel">
+        <div class="panel-hdr"><h5><i class="fas fa-clock"></i>Timesheets</h5></div>
+        <div style="overflow-x:auto;">
+          <table class="dt">
+            <thead><tr><th>Employee</th><th>Week</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th><th>Total</th><th>Overtime</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="tsTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== PAYROLL ========== -->
+    <div id="page-payroll" style="display:none;">
+      <div class="filter-bar">
+        <select class="finp" id="prPeriod" style="min-width:160px;"></select>
+        <select class="finp" id="prStatus" style="min-width:130px;">
+          <option value="">All Status</option>
+          <option value="draft">Draft</option>
+          <option value="processed">Processed</option>
+          <option value="paid">Paid</option>
+        </select>
+        <button class="btn btn-outline btn-sm" id="prExport"><i class="fas fa-download"></i> Export CSV</button>
+        <button class="btn btn-accent btn-sm" id="prProcess"><i class="fas fa-play"></i> Process Payroll</button>
+      </div>
+      <div class="stat-grid" id="prStats" style="margin-bottom:1.1rem;"></div>
+      <div class="panel">
+        <div class="panel-hdr"><h5><i class="fas fa-money-bill-wave"></i>Payroll Table</h5></div>
+        <div style="overflow-x:auto;">
+          <table class="dt">
+            <thead><tr><th>Employee</th><th>Base Salary</th><th>Overtime</th><th>Bonus</th><th>Allowances</th><th>Deductions</th><th>Net Pay</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="prTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== TASKS & PROJECTS ========== -->
+    <div id="page-tasks" style="display:none;">
+      <div class="tabs">
+        <button class="tab-btn active" data-ttab="projects">Projects</button>
+        <button class="tab-btn" data-ttab="kanban">Kanban Board</button>
+        <button class="tab-btn" data-ttab="gantt">Timeline</button>
+      </div>
+
+      <!-- Projects list -->
+      <div id="tt-projects">
+        <div class="filter-bar">
+          <input type="text" class="finp" id="projSearch" placeholder="🔍 Search projects..." style="flex:2;">
+          <select class="finp" id="projStatus" style="min-width:130px;">
+            <option value="">All Status</option>
+            <option value="planning">Planning</option>
+            <option value="active">Active</option>
+            <option value="completed">Completed</option>
+            <option value="on-hold">On Hold</option>
+          </select>
+          <button class="btn btn-accent btn-sm" id="addProjectBtn"><i class="fas fa-plus"></i> New Project</button>
+        </div>
+        <div class="panel">
+          <div class="panel-hdr"><h5><i class="fas fa-folder-open"></i>Projects</h5></div>
+          <div style="overflow-x:auto;">
+            <table class="dt">
+              <thead><tr><th>Project</th><th>Team</th><th>Progress</th><th>Priority</th><th>Due Date</th><th>Tasks</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="projTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kanban -->
+      <div id="tt-kanban" style="display:none;">
+        <div class="filter-bar">
+          <select class="finp" id="kanbanProject" style="min-width:180px;"><option value="">All Projects</option></select>
+          <select class="finp" id="kanbanAssignee" style="min-width:150px;"><option value="">All Assignees</option></select>
+          <select class="finp" id="kanbanPriority" style="min-width:130px;">
+            <option value="">All Priority</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+        <div class="kanban-board" id="kanbanBoard">
+          <div class="kanban-col" data-col="todo">
+            <div class="kanban-col-hdr"><span class="kcol-dot todo"></span>To Do <span class="kcol-count" id="kc-todo">0</span></div>
+            <div class="kanban-cards" id="kCards-todo"></div>
+            <button class="kanban-add-btn" data-col="todo"><i class="fas fa-plus"></i> Add Task</button>
+          </div>
+          <div class="kanban-col" data-col="inprogress">
+            <div class="kanban-col-hdr"><span class="kcol-dot inprogress"></span>In Progress <span class="kcol-count" id="kc-inprogress">0</span></div>
+            <div class="kanban-cards" id="kCards-inprogress"></div>
+            <button class="kanban-add-btn" data-col="inprogress"><i class="fas fa-plus"></i> Add Task</button>
+          </div>
+          <div class="kanban-col" data-col="review">
+            <div class="kanban-col-hdr"><span class="kcol-dot review"></span>Review <span class="kcol-count" id="kc-review">0</span></div>
+            <div class="kanban-cards" id="kCards-review"></div>
+            <button class="kanban-add-btn" data-col="review"><i class="fas fa-plus"></i> Add Task</button>
+          </div>
+          <div class="kanban-col" data-col="done">
+            <div class="kanban-col-hdr"><span class="kcol-dot done"></span>Done <span class="kcol-count" id="kc-done">0</span></div>
+            <div class="kanban-cards" id="kCards-done"></div>
+            <button class="kanban-add-btn" data-col="done"><i class="fas fa-plus"></i> Add Task</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gantt / Timeline -->
+      <div id="tt-gantt" style="display:none;">
+        <div class="panel">
+          <div class="panel-hdr"><h5><i class="fas fa-timeline"></i>Project Timeline</h5></div>
+          <div class="panel-body" id="ganttBody"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== SHIFT SCHEDULING ========== -->
+    <div id="page-shifts" style="display:none;">
+      <div class="filter-bar">
+        <select class="finp" id="shiftSite" style="min-width:150px;"><option value="">All Sites</option></select>
+        <select class="finp" id="shiftWeek" style="min-width:180px;"></select>
+        <button class="btn btn-outline btn-sm" id="shiftExport"><i class="fas fa-download"></i> Export</button>
+      </div>
+      <div class="panel" style="margin-bottom:1.1rem;">
+        <div class="panel-hdr">
+          <h5><i class="fas fa-calendar-week"></i>Weekly Shift Grid</h5>
+          <div style="display:flex;gap:0.5rem;align-items:center;">
+            <button class="abt" id="shiftPrev"><i class="fas fa-chevron-left"></i></button>
+            <span id="shiftWeekLabel" style="font-weight:600;font-size:0.88rem;min-width:160px;text-align:center;"></span>
+            <button class="abt" id="shiftNext"><i class="fas fa-chevron-right"></i></button>
+          </div>
+        </div>
+        <div style="overflow-x:auto;" id="shiftGridWrap">
+          <table class="dt" id="shiftGrid"></table>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr"><h5><i class="fas fa-arrows-rotate"></i>Shift Swap Requests</h5></div>
+        <div style="overflow-x:auto;">
+          <table class="dt">
+            <thead><tr><th>Requester</th><th>Their Shift</th><th>Swap With</th><th>Target Shift</th><th>Reason</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="shiftSwapTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== EQUIPMENT & INVENTORY ========== -->
+    <div id="page-equipment" style="display:none;">
+      <div class="filter-bar">
+        <input type="text" class="finp" id="eqSearch" placeholder="🔍 Search equipment..." style="flex:2;">
+        <select class="finp" id="eqCondition" style="min-width:130px;">
+          <option value="">All Conditions</option>
+          <option value="good">Good</option>
+          <option value="fair">Fair</option>
+          <option value="damaged">Damaged</option>
+        </select>
+        <select class="finp" id="eqStatus2" style="min-width:130px;">
+          <option value="">All Status</option>
+          <option value="available">Available</option>
+          <option value="checked-out">Checked Out</option>
+          <option value="maintenance">Maintenance</option>
+        </select>
+        <button class="btn btn-accent btn-sm" id="addEqBtn"><i class="fas fa-plus"></i> Add Equipment</button>
+        <button class="btn btn-outline btn-sm" id="eqExport"><i class="fas fa-download"></i> Export</button>
+      </div>
+      <div class="stat-grid" id="eqStats" style="margin-bottom:1.1rem;"></div>
+      <div class="panel">
+        <div class="panel-hdr"><h5><i class="fas fa-toolbox"></i>Equipment List</h5></div>
+        <div style="overflow-x:auto;">
+          <table class="dt">
+            <thead><tr><th>Item</th><th>Category</th><th>Serial / QR</th><th>Condition</th><th>Assigned To</th><th>Site</th><th>Status</th><th>Next Service</th><th>Actions</th></tr></thead>
+            <tbody id="eqTbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Pending checkout requests -->
+      <div class="panel" style="margin-top:1.1rem;">
+        <div class="panel-hdr"><h5><i class="fas fa-hand-holding"></i>Checkout Requests</h5></div>
+        <div style="overflow-x:auto;">
+          <table class="dt">
+            <thead><tr><th>Item</th><th>Requested By</th><th>Date</th><th>Purpose</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="eqReqTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== SITES ========== -->
+    <div id="page-sites" style="display:none;">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:1rem;">
+        <button class="btn btn-accent btn-sm" id="addSiteBtn"><i class="fas fa-plus"></i> Add Site</button>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr"><h5><i class="fas fa-building"></i>Construction Sites</h5></div>
+        <div style="overflow-x:auto;">
+          <table class="dt">
+            <thead><tr><th>Site</th><th>Manager</th><th>Workers</th><th>Progress</th><th>Budget</th><th>Spent</th><th>Status</th><th>End Date</th><th>Actions</th></tr></thead>
+            <tbody id="sTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== POSTS ========== -->
+    <div id="page-posts" style="display:none;">
+      <div class="filter-bar">
+        <input type="text" class="finp" id="fPost" placeholder="🔍 Search..." style="flex:2;min-width:140px;">
+        <select class="finp" id="fVis" style="min-width:130px;">
+          <option value="">All Visibility</option>
+          <option value="all">Everyone</option>
+          <option value="managers">Managers</option>
+          <option value="workers">Workers</option>
+          <option value="hidden">Hidden</option>
+        </select>
+        <select class="finp" id="fCat" style="min-width:130px;"><option value="">All Categories</option></select>
+        <button class="btn btn-accent btn-sm" id="addPostBtn"><i class="fas fa-plus"></i> Create Post</button>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr"><h5><i class="fas fa-newspaper"></i>Posts</h5></div>
+        <div style="overflow-x:auto;">
+          <table class="dt">
+            <thead><tr><th>Title</th><th>Author</th><th>Category</th><th>Visibility</th><th>Assigned</th><th>Created</th><th>Status</th><th>Views</th><th>Actions</th></tr></thead>
+            <tbody id="pTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== DOCUMENTS ========== -->
+    <div id="page-documents" style="display:none;">
+      <div class="filter-bar">
+        <input type="text" class="finp" id="docSearch" placeholder="🔍 Search docs..." style="flex:2;">
+        <select class="finp" id="docUser" style="min-width:160px;"><option value="">All Employees</option></select>
+        <select class="finp" id="docStatus" style="min-width:130px;">
+          <option value="">All Status</option>
+          <option value="pending">Pending Review</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+          <option value="expiring">Expiring Soon</option>
+        </select>
+        <button class="btn btn-accent btn-sm" id="uploadDocBtn"><i class="fas fa-upload"></i> Upload Doc</button>
+        <button class="btn btn-outline btn-sm" id="docExport"><i class="fas fa-download"></i> Export</button>
+      </div>
+      <div class="stat-grid" id="docStats" style="margin-bottom:1.1rem;"></div>
+      <div class="panel">
+        <div class="panel-hdr"><h5><i class="fas fa-folder-open"></i>Employee Documents</h5></div>
+        <div style="overflow-x:auto;">
+          <table class="dt">
+            <thead><tr><th>Employee</th><th>Document</th><th>Type</th><th>Uploaded</th><th>Expiry</th><th>Status</th><th>Notes</th><th>Actions</th></tr></thead>
+            <tbody id="docTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== CATEGORIES ========== -->
+    <div id="page-categories" style="display:none;">
+      <div class="grid2">
+        <div class="panel panel-body">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+            <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;">Post Categories</div>
+            <button class="btn btn-accent btn-sm" id="addCatBtn"><i class="fas fa-plus"></i> Add</button>
+          </div>
+          <div id="catList"></div>
+        </div>
+        <div class="panel panel-body">
+          <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;margin-bottom:1rem;">Category Statistics</div>
+          <div class="cat-chart-wrap"><canvas id="catChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== MESSAGES ========== -->
+    <div id="page-messages" style="display:none;">
+      <div class="msg-layout">
+        <div class="panel" style="display:flex;flex-direction:column;height:620px;">
+          <div class="panel-hdr" style="flex-shrink:0;">
+            <h5><i class="fas fa-comments"></i>Groups</h5>
+            <button class="btn btn-accent btn-sm" id="createGroupBtn"><i class="fas fa-plus"></i></button>
+          </div>
+          <div style="padding:0.65rem;flex:1;overflow-y:auto;" id="gListBox"></div>
+        </div>
+        <div class="panel chat-area">
+          <div class="chat-hdr" id="chatHdr">
+            <div id="chatGIcon" style="width:36px;height:36px;border-radius:9px;background:var(--accent-glow);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">💬</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:700;font-size:0.88rem;" id="chatGName">Select Group</div>
+              <div style="font-size:0.7rem;color:var(--text3);" id="chatGMeta"></div>
+            </div>
+            <button class="abt inf" id="chatMembersBtn" title="Members"><i class="fas fa-users"></i></button>
+            <button class="abt dan" id="chatDeleteBtn" title="Delete Group"><i class="fas fa-trash"></i></button>
+          </div>
+          <div class="chat-msgs" id="chatMsgsBox"></div>
+          <div class="chat-inp-bar">
+            <button class="abt" title="Attach File" id="chatAttachBtn"><i class="fas fa-paperclip"></i></button>
+            <input type="file" id="msgFileInput" style="display:none">
+            <button class="abt" title="Video/Media" id="chatVideoBtn"><i class="fas fa-video"></i></button>
+            <input type="file" id="msgVideoInput" accept="video/*,image/*" style="display:none">
+            <button class="abt" title="Voice Note" id="voiceNoteBtn"><i class="fas fa-microphone"></i></button>
+            <input type="text" id="chatTxt" placeholder="Type a message...">
+            <button class="btn btn-accent btn-sm" id="sendChatBtn"><i class="fas fa-paper-plane"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== NOTIFICATIONS ========== -->
+    <div id="page-notifications" style="display:none;">
+      <div class="filter-bar">
+        <select class="finp" id="notifTypeFilter" style="min-width:160px;">
+          <option value="">All Types</option>
+          <option value="approval">Approval</option>
+          <option value="task">Task</option>
+          <option value="leave">Leave</option>
+          <option value="system">System</option>
+          <option value="alert">Alert</option>
+        </select>
+        <select class="finp" id="notifReadFilter" style="min-width:130px;">
+          <option value="">All</option>
+          <option value="unread">Unread</option>
+          <option value="read">Read</option>
+        </select>
+        <button class="btn btn-outline btn-sm" id="markAllReadBtn"><i class="fas fa-check-double"></i> Mark All Read</button>
+        <button class="btn btn-danger btn-sm" id="clearNotifBtn"><i class="fas fa-trash"></i> Clear All</button>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr"><h5><i class="fas fa-bell"></i>Notifications</h5></div>
+        <div id="notifList" style="padding:0.5rem 0;"></div>
+      </div>
+      <div class="panel" style="margin-top:1.1rem;">
+        <div class="panel-hdr"><h5><i class="fas fa-sliders"></i>Notification Preferences</h5></div>
+        <div class="panel-body" id="notifPrefs"></div>
+      </div>
+    </div>
+
+    <!-- ========== EMAIL CENTER ========== -->
+    <div id="page-emailcenter" style="display:none;">
+      <div class="tabs">
+        <button class="tab-btn active" data-etab="log">Email Log</button>
+        <button class="tab-btn" data-etab="compose">Compose</button>
+        <button class="tab-btn" data-etab="bulk">Bulk Email</button>
+              </div>
+
+      <div id="et-log">
+        <div class="filter-bar">
+          <select class="finp" id="emailLogStatus" style="min-width:130px;">
+            <option value="">All Status</option>
+            <option value="sent">Sent</option>
+            <option value="failed">Failed</option>
+            <option value="pending">Pending</option>
+          </select>
+          <input type="text" class="finp" id="emailLogSearch" placeholder="🔍 Search emails..." style="flex:2;">
+        </div>
+        <div class="panel">
+          <div class="panel-hdr">
+            <h5><i class="fas fa-inbox"></i>Email Log</h5>
+            <div class="emailjs-status" id="emailjsStatus"><span class="dot" style="background:#34d399;"></span> EmailJS Connected</div>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="dt">
+              <thead><tr><th>To</th><th>Subject</th><th>Template</th><th>Sent At</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="emailLogTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="et-compose" style="display:none;">
+        <div class="panel">
+          <div class="panel-hdr"><h5><i class="fas fa-pen"></i>Compose Email</h5></div>
+          <div class="mbody">
+            <div class="fg"><label class="fl">To</label><input class="fc" id="compTo" placeholder="recipient@email.com"></div>
+            <div class="fg"><label class="fl">Subject</label><input class="fc" id="compSubject"></div>
+            <div class="fg"><label class="fl">Message</label><textarea class="fc" id="compBody" rows="6"></textarea></div>
+            <button class="btn btn-accent" id="compSendBtn"><i class="fas fa-paper-plane"></i> Send Email</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="et-bulk" style="display:none;">
+        <div class="panel">
+          <div class="panel-hdr"><h5><i class="fas fa-users"></i>Bulk Email</h5></div>
+          <div class="mbody">
+            <div class="fg">
+              <label class="fl">Send To</label>
+              <div style="display:flex;flex-wrap:wrap;gap:0.5rem;" id="bulkEmailTargets">
+                <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.83rem;"><input type="checkbox" value="all"> All Users</label>
+                <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.83rem;"><input type="checkbox" value="admin"> Admins</label>
+                <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.83rem;"><input type="checkbox" value="manager"> Managers</label>
+                <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.83rem;"><input type="checkbox" value="worker"> Workers</label>
+              </div>
+            </div>
+            <div class="fg"><label class="fl">Subject</label><input class="fc" id="bulkSubject"></div>
+            <div class="fg"><label class="fl">Message</label><textarea class="fc" id="bulkBody" rows="5"></textarea></div>
+            <button class="btn btn-accent" id="bulkSendBtn"><i class="fas fa-paper-plane"></i> Send Bulk Email</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+   <!-- ========== SAFETY & INCIDENTS ========== -->
+<div id="page-safety" style="display:none;">
+  <div class="tabs">
+    <button class="tab-btn active" data-stab="overview">Overview</button>  <!-- ADD 'active' HERE -->
+    <button class="tab-btn" data-stab="inductions">Inductions</button>
+        <button class="tab-btn" data-stab="exports">Export Reports</button>
+    <button class="tab-btn" data-stab="incidents">Incidents</button>  <!-- REMOVE 'active' FROM HERE -->
+    <button class="tab-btn" data-stab="checklist">Daily Checklist</button>
+    <button class="tab-btn" data-stab="training">Training</button>
+    <button class="tab-btn" data-stab="score">Safety Scores</button>
+  </div>
+      <div id="st-overview" style="display:none;">
+        <div class="panel" style="margin-bottom:1rem;">
+          <div class="panel-hdr"><h5><i class="fas fa-building"></i>Active Site</h5></div>
+          <div class="panel-body">
+            <select class="finp" id="safeActiveSite"><option value="">Select a site</option></select>
+            <div class="frow" style="margin-top:0.8rem;">
+              <button class="btn btn-outline"><i class="fas fa-buildings"></i> Manage Sites</button>
+              <button class="btn btn-outline"><i class="fas fa-user-check"></i> Inductions</button>
+            </div>
+          </div>
+        </div>
+        <div class="stat-grid" id="safeOverviewStats"></div>
+      </div>
+
+      <div id="st-inductions" style="display:none;">
+        <div class="panel" style="margin-bottom:1rem;">
+          <div class="panel-hdr"><h5><i class="fas fa-id-card"></i>Worker Inductions</h5></div>
+          <div class="panel-body">
+            <div class="filter-bar">
+              <input type="text" class="finp" id="indSearch" placeholder="Search by name or company..." style="flex:2;">
+              <select class="finp" id="indStatus"><option value="">All Statuses</option><option>Inducted</option><option>Pending Review</option><option>In Progress</option><option>Not Started</option><option>Expired</option></select>
+            </div>
+            <div style="overflow-x:auto;">
+              <table class="dt">
+                <thead><tr><th>Worker</th><th>Company</th><th>Status</th><th>Updated</th></tr></thead>
+                <tbody id="indTbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="st-exports" style="display:none;">
+        <div class="panel">
+          <div class="panel-hdr"><h5><i class="fas fa-file-export"></i>Export Reports</h5></div>
+          <div class="panel-body">
+            <div class="frow3">
+              <div><label class="lbl">Report Type</label><select class="finp" id="safeRptType"><option value="">Select report type</option><option value="hazards">Hazard Summary</option><option value="inductions">Induction Status</option><option value="incidents">Incident Log</option></select></div>
+              <div><label class="lbl">Start Date</label><input class="finp" type="date" id="safeRptFrom"></div>
+              <div><label class="lbl">End Date</label><input class="finp" type="date" id="safeRptTo"></div>
+            </div>
+            <div class="frow3" style="margin-top:0.75rem;">
+              <div><label class="lbl">Filter by Status</label><select class="finp" id="safeRptStatus"><option value="">All Statuses</option><option value="open">Open</option><option value="resolved">Closed</option></select></div>
+              <div><label class="lbl">Export Format</label><select class="finp" id="safeRptFmt"><option value="">Select format</option><option value="csv">CSV</option><option value="json">JSON</option></select></div>
+              <div style="display:flex;align-items:flex-end;"><label style="display:flex;align-items:center;gap:0.45rem;font-size:0.82rem;"><input type="checkbox" id="safeRptAttach"> Include attachment references</label></div>
+            </div>
+            <button class="btn btn-accent" style="margin-top:0.9rem;" id="safeRptGenerate"><i class="fas fa-download"></i> Generate Export</button>
+          </div>
+        </div>
+      </div>
+      <div id="st-incidents">
+        <div class="filter-bar">
+          <select class="finp" id="incSeverity" style="min-width:130px;">
+            <option value="">All Severity</option>
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+          <select class="finp" id="incSite" style="min-width:150px;"><option value="">All Sites</option></select>
+          <button class="btn btn-accent btn-sm" id="reportIncidentBtn"><i class="fas fa-plus"></i> Report Incident</button>
+          <button class="btn btn-outline btn-sm" id="incExport"><i class="fas fa-download"></i> Export</button>
+        </div>
+        <div class="stat-grid" id="safetyStats" style="margin-bottom:1.1rem;"></div>
+        <div class="panel">
+          <div class="panel-hdr"><h5><i class="fas fa-triangle-exclamation"></i>Incident Log</h5></div>
+          <div style="overflow-x:auto;">
+            <table class="dt">
+              <thead><tr><th>Date</th><th>Site</th><th>Reporter</th><th>Type</th><th>Severity</th><th>Description</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="incTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="st-checklist" style="display:none;">
+        <div class="panel">
+          <div class="panel-hdr">
+            <h5><i class="fas fa-clipboard-check"></i>Daily Safety Checklist</h5>
+            <select class="finp btn-sm" id="checklistSite" style="width:auto;"><option value="">All Sites</option></select>
+          </div>
+          <div class="panel-body" id="checklistBody"></div>
+        </div>
+      </div>
+
+      <div id="st-training" style="display:none;">
+        <div class="panel">
+          <div class="panel-hdr">
+            <h5><i class="fas fa-graduation-cap"></i>Training &amp; Certifications</h5>
+            <button class="btn btn-accent btn-sm" id="addTrainingBtn"><i class="fas fa-plus"></i> Add Record</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="dt">
+              <thead><tr><th>Employee</th><th>Training</th><th>Completed</th><th>Expiry</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="trainingTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="st-score" style="display:none;">
+        <div class="panel">
+          <div class="panel-hdr"><h5><i class="fas fa-star"></i>Safety Scores by Site</h5></div>
+          <div class="panel-body" id="safetyScoreBody"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== AUDIT LOG ========== -->
+    <div id="page-auditlog" style="display:none;">
+      <div class="filter-bar">
+        <input type="text" class="finp" id="auditSearch" placeholder="🔍 Search actions..." style="flex:2;">
+        <select class="finp" id="auditUser" style="min-width:160px;"><option value="">All Users</option></select>
+        <select class="finp" id="auditAction" style="min-width:150px;">
+          <option value="">All Actions</option>
+          <option value="login">Login</option>
+          <option value="logout">Logout</option>
+          <option value="create">Create</option>
+          <option value="update">Update</option>
+          <option value="delete">Delete</option>
+          <option value="approve">Approve</option>
+          <option value="reject">Reject</option>
+        </select>
+        <input type="date" class="finp" id="auditFrom">
+        <input type="date" class="finp" id="auditTo">
+        <button class="btn btn-outline btn-sm" id="auditExport"><i class="fas fa-download"></i> Export</button>
+      </div>
+      <div class="panel" style="margin-bottom:1.1rem;">
+        <div class="panel-hdr"><h5><i class="fas fa-fire"></i>Activity Heatmap</h5></div>
+        <div class="panel-body" id="auditHeatmap"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr"><h5><i class="fas fa-scroll"></i>Full Audit Log</h5></div>
+        <div style="overflow-x:auto;">
+          <table class="dt">
+            <thead><tr><th>Time</th><th>User</th><th>Role</th><th>Action</th><th>Target</th><th>Details</th><th>IP</th><th>Status</th></tr></thead>
+            <tbody id="auditTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== RBAC PERMISSIONS ========== -->
+    <div id="page-rbac" style="display:none;">
+      <div class="tabs">
+        <button class="tab-btn active" data-rtab="matrix">Permission Matrix</button>
+        <button class="tab-btn" data-rtab="roles">Custom Roles</button>
+        <button class="tab-btn" data-rtab="overrides">User Overrides</button>
+      </div>
+
+      <div id="rt-matrix">
+        <div class="panel">
+          <div class="panel-hdr"><h5><i class="fas fa-table-cells"></i>Role Permission Matrix</h5></div>
+          <div style="overflow-x:auto;" id="rbacMatrix"></div>
+        </div>
+      </div>
+
+      <div id="rt-roles" style="display:none;">
+        <div class="filter-bar">
+          <button class="btn btn-accent btn-sm" id="addRoleBtn"><i class="fas fa-plus"></i> Create Role</button>
+        </div>
+        <div class="panel">
+          <div class="panel-hdr"><h5><i class="fas fa-user-tag"></i>Custom Roles</h5></div>
+          <div style="overflow-x:auto;">
+            <table class="dt">
+              <thead><tr><th>Role Name</th><th>Badge Color</th><th>Users</th><th>Permissions</th><th>Actions</th></tr></thead>
+              <tbody id="rolesTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="rt-overrides" style="display:none;">
+        <div class="panel">
+          <div class="panel-hdr"><h5><i class="fas fa-user-shield"></i>Per-User Permission Overrides</h5></div>
+          <div style="overflow-x:auto;">
+            <table class="dt">
+              <thead><tr><th>User</th><th>Override Permission</th><th>Grant / Deny</th><th>Reason</th><th>Actions</th></tr></thead>
+              <tbody id="overrideTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== CLIENT PORTAL ========== -->
+    <div id="page-clientportal" style="display:none;">
+      <div class="tabs">
+        <button class="tab-btn active" data-cptab="clients">Clients</button>
+        <button class="tab-btn" data-cptab="tickets">Support Tickets</button>
+      </div>
+
+      <div id="cp-clients">
+        <div class="filter-bar">
+          <input type="text" class="finp" id="clientSearch" placeholder="🔍 Search clients..." style="flex:2;">
+          <button class="btn btn-accent btn-sm" id="addClientBtn"><i class="fas fa-plus"></i> Add Client</button>
+        </div>
+        <div class="panel">
+          <div class="panel-hdr"><h5><i class="fas fa-briefcase"></i>Client Accounts</h5></div>
+          <div style="overflow-x:auto;">
+            <table class="dt">
+              <thead><tr><th>Client</th><th>Contact</th><th>Email</th><th>Assigned Sites</th><th>Tickets</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="clientTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="cp-tickets" style="display:none;">
+        <div class="filter-bar">
+          <select class="finp" id="ticketStatus" style="min-width:150px;">
+            <option value="">All Status</option>
+            <option value="open">Open</option>
+            <option value="in-progress">In Progress</option>
+            <option value="closed">Closed</option>
+          </select>
+          <select class="finp" id="ticketClient" style="min-width:160px;"><option value="">All Clients</option></select>
+          <button class="btn btn-accent btn-sm" id="addTicketBtn"><i class="fas fa-plus"></i> New Ticket</button>
+        </div>
+        <div class="panel">
+          <div class="panel-hdr"><h5><i class="fas fa-ticket"></i>Support Tickets</h5></div>
+          <div style="overflow-x:auto;">
+            <table class="dt">
+              <thead><tr><th>Ticket #</th><th>Client</th><th>Subject</th><th>Priority</th><th>Assigned To</th><th>Created</th><th>Updated</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="ticketTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== SETTINGS ========== -->
+    <div id="page-settings" style="display:none;">
+      <div class="tabs">
+        <button class="tab-btn active" data-settab="general">General</button>
+        <button class="tab-btn" data-settab="security">Security</button>
+        <button class="tab-btn" data-settab="appearance">Appearance</button>
+        <button class="tab-btn" data-settab="emailjs">EmailJS</button>
+        <button class="tab-btn" data-settab="company">Company</button>
+        <button class="tab-btn" data-settab="leave-policy">Leave Policy</button>
+        <button class="tab-btn" data-settab="data">Data</button>
+      </div>
+
+<!-- General -->
+<div id="set-general">
+  <div class="grid2">
+    <div class="panel panel-body">
+      <div class="fg"><label class="fl">System Name</label><input class="fc" id="sysName" value="Nixers Construction CMS"></div>
+      <div class="fg"><label class="fl">Default Timezone</label>
+        <select class="fc" id="sysTz">
+          <option>Asia/Dhaka</option><option>America/New_York</option><option>Europe/London</option><option>Asia/Dubai</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">Date Format</label>
+        <select class="fc" id="sysDateFmt"><option>YYYY-MM-DD</option><option>DD/MM/YYYY</option><option>MM/DD/YYYY</option></select>
+      </div>
+      <div class="fg"><label class="fl">Currency</label>
+        <select class="fc" id="sysCurrency">
+          <option value="USD">USD - US Dollar ($)</option>
+          <option value="EUR">EUR - Euro (€)</option>
+          <option value="GBP">GBP - British Pound (£)</option>
+          <option value="BDT">BDT - Bangladeshi Taka (৳)</option>
+          <option value="AED">AED - UAE Dirham (د.إ)</option>
+          <option value="SAR">SAR - Saudi Riyal (ر.س)</option>
+          <option value="INR">INR - Indian Rupee (₹)</option>
+          <option value="CAD">CAD - Canadian Dollar (C$)</option>
+          <option value="AUD">AUD - Australian Dollar (A$)</option>
+          <option value="JPY">JPY - Japanese Yen (¥)</option>
+          <option value="CNY">CNY - Chinese Yuan (¥)</option>
+          <option value="SGD">SGD - Singapore Dollar (S$)</option>
+          <option value="MYR">MYR - Malaysian Ringgit (RM)</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">Currency Symbol Position</label>
+        <select class="fc" id="currencyPosition">
+          <option value="before">Before Amount ($100)</option>
+          <option value="after">After Amount (100$)</option>
+          <option value="space_before">Space Before ($ 100)</option>
+          <option value="space_after">Space After (100 $)</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">Language</label>
+        <select class="fc" id="sysLang"><option>English</option><option>বাংলা (Bangla)</option><option>Arabic</option><option>French</option></select>
+      </div>
+      <hr class="div">
+      <div class="sw-row"><div class="sw-info"><div class="sw-label">Email Notifications</div><div class="sw-desc">Get notified via email</div></div><label class="sw"><input type="checkbox" id="swEmail" checked><span class="sw-sl"></span></label></div>
+      <div class="sw-row"><div class="sw-info"><div class="sw-label">SMS Alerts</div><div class="sw-desc">Critical event SMS</div></div><label class="sw"><input type="checkbox" id="swSms"><span class="sw-sl"></span></label></div>
+      <div class="sw-row"><div class="sw-info"><div class="sw-label">Push Notifications</div></div><label class="sw"><input type="checkbox" id="swPush" checked><span class="sw-sl"></span></label></div>
+      <div class="sw-row"><div class="sw-info"><div class="sw-label">Working Hours Config</div><div class="sw-desc">Mon–Fri 08:00–17:00</div></div><label class="sw"><input type="checkbox" id="swWorkHours" checked><span class="sw-sl"></span></label></div>
+      <div class="sw-row"><div class="sw-info"><div class="sw-label">Maintenance Mode</div><div class="sw-desc">Blocks all non-admin access</div></div><label class="sw"><input type="checkbox" id="swMaintenance"><span class="sw-sl"></span></label></div>
+    </div>
+    <div class="panel panel-body">
+      <div class="fg"><label class="fl">Working Hours Start</label><input class="fc" id="workStart" type="time" value="08:00"></div>
+      <div class="fg"><label class="fl">Working Hours End</label><input class="fc" id="workEnd" type="time" value="17:00"></div>
+      <div class="fg"><label class="fl">Work Days</label>
+        <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.35rem;" id="workDays">
+          <label class="day-check"><input type="checkbox" value="Mon" checked> Mon</label>
+          <label class="day-check"><input type="checkbox" value="Tue" checked> Tue</label>
+          <label class="day-check"><input type="checkbox" value="Wed" checked> Wed</label>
+          <label class="day-check"><input type="checkbox" value="Thu" checked> Thu</label>
+          <label class="day-check"><input type="checkbox" value="Fri" checked> Fri</label>
+          <label class="day-check"><input type="checkbox" value="Sat"> Sat</label>
+          <label class="day-check"><input type="checkbox" value="Sun"> Sun</label>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+ <!-- Security -->
+<div id="set-security" style="display:none;">
+  <div class="grid2">
+    <div class="panel panel-body">
+      <div class="fg"><label class="fl">Session Timeout (min)</label><input class="fc" type="number" id="sesTimeout" value="30"></div>
+      <div class="fg"><label class="fl">Max Login Attempts</label><input class="fc" type="number" id="maxLogin" value="5"></div>
+      <div class="fg"><label class="fl">Password Min Length</label><input class="fc" type="number" id="pwdLen" value="8"></div>
+      <hr class="div">
+      <div class="sw-row"><div class="sw-info"><div class="sw-label">Two-Factor Auth</div></div><label class="sw"><input type="checkbox" id="sw2fa"><span class="sw-sl"></span></label></div>
+      <div class="sw-row"><div class="sw-info"><div class="sw-label">IP Whitelisting</div></div><label class="sw"><input type="checkbox" id="swIp"><span class="sw-sl"></span></label></div>
+      <div class="sw-row"><div class="sw-info"><div class="sw-label">Audit Logging</div><div class="sw-desc">Log all admin actions</div></div><label class="sw"><input type="checkbox" id="swAudit" checked><span class="sw-sl"></span></label></div>
+    </div>
+    
+    <!-- Password Change Section -->
+    <div class="panel panel-body">
+      <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;margin-bottom:1rem;color:var(--accent);">
+        <i class="fas fa-key"></i> Change Password
+      </div>
+      
+      <div class="fg">
+        <label class="fl">Current Password</label>
+        <input class="fc" type="password" id="currentPassword" placeholder="Enter current password">
+      </div>
+      
+      <div class="fg">
+        <label class="fl">New Password</label>
+        <input class="fc" type="password" id="newPassword" placeholder="Enter new password">
+        <div style="font-size:0.65rem;color:var(--text3);margin-top:0.25rem;">
+          Password must be at least 8 characters
+        </div>
+      </div>
+      
+      <div class="fg">
+        <label class="fl">Confirm New Password</label>
+        <input class="fc" type="password" id="confirmPassword" placeholder="Confirm new password">
+      </div>
+      
+      <div style="display:flex;gap:0.75rem;margin-top:0.5rem;">
+        <button class="btn btn-accent btn-sm" id="changePasswordBtn">
+          <i class="fas fa-save"></i> Change Password
+        </button>
+        <button class="btn btn-outline btn-sm" id="resetPasswordLinkBtn">
+          <i class="fas fa-envelope"></i> Send Reset Link
+        </button>
+      </div>
+      
+      <div id="passwordStrength" style="margin-top:0.75rem;font-size:0.7rem;"></div>
+    </div>
+  </div>
+</div>
+
+      <!-- Appearance -->
+      <div id="set-appearance" style="display:none;">
+        <div class="grid2">
+          <div class="panel panel-body">
+            <div class="fg"><label class="fl">Accent Color</label>
+              <div style="display:flex;gap:0.5rem;flex-wrap:wrap;" id="colorSwatches">
+                <div class="color-sw sel" style="background:#eab308;" data-color="#eab308"></div>
+                <div class="color-sw" style="background:#3b82f6;" data-color="#3b82f6"></div>
+                <div class="color-sw" style="background:#10b981;" data-color="#10b981"></div>
+                <div class="color-sw" style="background:#8b5cf6;" data-color="#8b5cf6"></div>
+                <div class="color-sw" style="background:#f43f5e;" data-color="#f43f5e"></div>
+                <div class="color-sw" style="background:#f97316;" data-color="#f97316"></div>
+              </div>
+            </div>
+            <div class="sw-row"><div class="sw-info"><div class="sw-label">Compact Mode</div></div><label class="sw"><input type="checkbox" id="swCompact"><span class="sw-sl"></span></label></div>
+            <div class="sw-row"><div class="sw-info"><div class="sw-label">Animations</div></div><label class="sw"><input type="checkbox" id="swAnims" checked><span class="sw-sl"></span></label></div>
+            <div class="sw-row"><div class="sw-info"><div class="sw-label">Sidebar Icons Only (Tablet)</div></div><label class="sw"><input type="checkbox" id="swIconOnly"><span class="sw-sl"></span></label></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EmailJS -->
+      <div id="set-emailjs" style="display:none;">
+        <div class="grid2">
+          <div class="panel panel-body">
+            <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;margin-bottom:1rem;">EmailJS Configuration</div>
+            <div class="fg"><label class="fl">Service ID</label><input class="fc" id="ejsService" placeholder="service_xxxxxxx"></div>
+            <div class="fg"><label class="fl">Public Key</label><input class="fc" id="ejsPublicKey" placeholder="xxxxxxxxxxxxxxx"></div>
+            <hr class="div">
+            <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.75rem;">Template IDs</div>
+            <div class="fg"><label class="fl">Welcome / Approved</label><input class="fc" id="ejsTplWelcome" placeholder="template_xxxxxxx"></div>
+            <div class="fg"><label class="fl">Leave Decision</label><input class="fc" id="ejsTplLeave" placeholder="template_xxxxxxx"></div>
+            <div class="fg"><label class="fl">Document Decision</label><input class="fc" id="ejsTplDoc" placeholder="template_xxxxxxx"></div>
+            <div class="fg"><label class="fl">Task Assigned</label><input class="fc" id="ejsTplTask" placeholder="template_xxxxxxx"></div>
+            <div class="fg"><label class="fl">Payslip Ready</label><input class="fc" id="ejsTplPayslip" placeholder="template_xxxxxxx"></div>
+            <div class="fg"><label class="fl">Critical Incident</label><input class="fc" id="ejsTplIncident" placeholder="template_xxxxxxx"></div>
+            <div class="fg"><label class="fl">Support Ticket Update</label><input class="fc" id="ejsTplTicket" placeholder="template_xxxxxxx"></div>
+            <button class="btn btn-accent btn-sm" id="ejsTestBtn"><i class="fas fa-vial"></i> Send Test Email</button>
+          </div>
+          <div class="panel panel-body">
+            <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.75rem;font-family:'Space Grotesk',sans-serif;">Email Template Previewer</div>
+            <select class="fc" id="tplPreviewSelect" style="margin-bottom:0.75rem;">
+              <option value="welcome">Welcome / Approved</option>
+              <option value="leave">Leave Decision</option>
+              <option value="task">Task Assigned</option>
+              <option value="payslip">Payslip Ready</option>
+            </select>
+            <div id="tplPreviewBox" style="background:var(--surface2);border-radius:var(--radius-sm);padding:1rem;font-size:0.83rem;min-height:200px;border:1px solid var(--border);"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Company Profile -->
+      <div id="set-company" style="display:none;">
+        <div class="grid2">
+          <div class="panel panel-body">
+            <div class="fg"><label class="fl">Company Name</label><input class="fc" id="coName" value="Nixers Construction Ltd."></div>
+            <div class="fg"><label class="fl">Company Address</label><textarea class="fc" id="coAddr" rows="3"></textarea></div>
+            <div class="fg"><label class="fl">Phone</label><input class="fc" id="coPhone"></div>
+            <div class="fg"><label class="fl">Email</label><input class="fc" id="coEmail" type="email"></div>
+            <div class="fg"><label class="fl">Website</label><input class="fc" id="coWeb"></div>
+            <div class="fg"><label class="fl">Logo Upload</label>
+              <div class="file-drop" id="logoDropZone">
+                <i class="fas fa-image" style="color:var(--accent);margin-right:0.5rem;"></i>Click or drag to upload logo
+                <input type="file" id="logoInput" accept="image/*" style="display:none;">
+              </div>
+              <img id="logoPreview" src="" style="display:none;max-height:60px;margin-top:0.5rem;border-radius:6px;">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Leave Policy -->
+      <div id="set-leave-policy" style="display:none;">
+        <div class="grid2">
+          <div class="panel panel-body">
+             <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;margin-bottom:1rem;">Leave Allowances (days/year)</div>
+            <div class="fg"><label class="fl">Annual Leave</label><input class="fc" type="number" id="lpAnnual" value="20"></div>
+            <div class="fg"><label class="fl">Sick Leave</label><input class="fc" type="number" id="lpSick" value="10"></div>
+            <div class="fg"><label class="fl">Emergency Leave</label><input class="fc" type="number" id="lpEmergency" value="5"></div>
+            <div class="fg"><label class="fl">Max Consecutive Days</label><input class="fc" type="number" id="lpMaxConsec" value="14"></div>
+            <div class="fg"><label class="fl">Notice Required (days)</label><input class="fc" type="number" id="lpNotice" value="3"></div>
+            <div class="sw-row"><div class="sw-info"><div class="sw-label">Allow Carry Forward</div></div><label class="sw"><input type="checkbox" id="swCarry" checked><span class="sw-sl"></span></label></div>
+            <div class="sw-row"><div class="sw-info"><div class="sw-label">Require Manager Approval</div></div><label class="sw"><input type="checkbox" id="swApproval" checked><span class="sw-sl"></span></label></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data -->
+      <div id="set-data" style="display:none;">
+        <div class="grid2">
+          <div class="panel panel-body">
+            <button class="btn btn-outline" style="width:100%;margin-bottom:0.5rem;justify-content:center;" id="exportAllBtn"><i class="fas fa-download"></i> Export All Data</button>
+            <button class="btn btn-outline" style="width:100%;margin-bottom:0.5rem;justify-content:center;" id="importBackupBtn"><i class="fas fa-upload"></i> Import Backup</button>
+            <button class="btn btn-danger" style="width:100%;margin-bottom:0.5rem;justify-content:center;" id="clearCacheBtn"><i class="fas fa-trash"></i> Clear Cache</button>
+            <button class="btn btn-danger" style="width:100%;justify-content:center;" id="wipeDataBtn"><i class="fas fa-skull"></i> Wipe All Data</button>
+            <hr class="div">
+            <div style="font-size:0.78rem;color:var(--text2);">
+              <div style="display:flex;justify-content:space-between;margin-bottom:0.4rem;"><span>Storage Used</span><span style="color:var(--accent);" id="storageUsed">2.4 MB / 10 MB</span></div>
+              <div class="pb" style="height:6px;"><div class="pb-fill" id="storageBar" style="width:24%"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:1rem;"><button class="btn btn-accent" id="saveSettingsBtn"><i class="fas fa-save"></i> Save Settings</button></div>
+    </div>
+
+  </div><!-- /page-content -->
+</div><!-- /main -->
+
+
+<!-- ===================== MODALS ===================== -->
+
+<!-- Profile Modal -->
+<div class="modal-ov" id="profileModal">
+  <div class="modal-box xl">
+    <div class="mhdr">
+      <h4><i class="fas fa-user-circle"></i><span id="pmTitle">Profile</span></h4>
+      <button class="xbtn" data-close="profileModal"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="mbody" style="padding:0;">
+      <div class="profile-cover" id="pmCover">
+        <div class="profile-av-wrap">
+          <div class="profile-av" id="pmAv">
+            <span id="pmAvInit">A</span>
+            <img id="pmAvImg" src="" style="display:none;">
+            <div class="av-overlay"><i class="fas fa-camera"></i> Change</div>
+          </div>
+          <input type="file" id="avatarFileInput" accept="image/*" style="display:none">
+        </div>
+      </div>
+      <div class="profile-meta">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
+          <div>
+             <div style="font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:1.2rem;" id="pmName2">-</div>
+            <div style="color:var(--text3);font-size:0.8rem;" id="pmRole2">-</div>
+          </div>
+          <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+            <button class="btn btn-accent btn-sm pm-tab-btn active" data-pmtab="pmEdit">Edit Info</button>
+            <button class="btn btn-outline btn-sm pm-tab-btn" data-pmtab="pmPerf">Performance</button>
+            <button class="btn btn-outline btn-sm pm-tab-btn" data-pmtab="pmDocs">Documents</button>
+            <button class="btn btn-outline btn-sm pm-tab-btn" data-pmtab="pmHist">History</button>
+            <button class="btn btn-outline btn-sm pm-tab-btn" data-pmtab="pmIdCard">ID Card</button>
+          </div>
+        </div>
+      </div>
+
+ <div id="pmEdit" style="padding:1.25rem 1.5rem;">
+  <div class="frow3">
+    <div class="fg"><label class="fl">Full Name</label><input class="fc" id="pmFName"></div>
+    <div class="fg"><label class="fl">Email</label><input class="fc" id="pmEmail" type="email"></div>
+    <div class="fg"><label class="fl">Phone</label><input class="fc" id="pmPhone"></div>
+    <div class="fg"><label class="fl">Role</label><select class="fc" id="pmRole"><option value="admin">Admin</option><option value="manager">Manager</option><option value="worker">Worker</option></select></div>
+    <div class="fg"><label class="fl">Status</label><select class="fc" id="pmStatus"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+    <div class="fg"><label class="fl">Department</label><input class="fc" id="pmDept"></div>
+    <div class="fg"><label class="fl">Employee ID</label><input class="fc" id="pmEmpId" placeholder="EMP-0001"></div>
+    <div class="fg"><label class="fl">ID Card Number</label><input class="fc" id="pmIdNum" placeholder="NX-ADM-001"></div>
+    <div class="fg"><label class="fl">National ID / Passport</label><input class="fc" id="pmNatId"></div>
+    <div class="fg"><label class="fl">Date of Birth</label><input class="fc" id="pmDob" type="date"></div>
+    <div class="fg"><label class="fl">Date Hired</label><input class="fc" id="pmHired" type="date"></div>
+    <div class="fg"><label class="fl">Salary (USD)</label><input class="fc" id="pmSalary" type="number" placeholder="0"></div>
+  </div>
+  <div class="fg"><label class="fl">Address</label><input class="fc" id="pmAddr"></div>
+  <div class="fg"><label class="fl">Emergency Contact</label><input class="fc" id="pmEmerg" placeholder="Name — Phone"></div>
+  <div class="fg"><label class="fl">Bio / Notes</label><textarea class="fc" id="pmBio" rows="3"></textarea></div>
+  
+  <!-- PASSWORD CHANGE SECTION -->
+  <hr class="div">
+  <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:0.85rem;margin:0.75rem 0;color:var(--accent);">
+    <i class="fas fa-key"></i> Password Management
+  </div>
+  
+  <div class="frow3">
+    <div class="fg">
+      <label class="fl">New Password</label>
+      <input class="fc" type="password" id="pmNewPassword" placeholder="Enter new password">
+      <div style="font-size:0.65rem;color:var(--text3);margin-top:0.25rem;">
+        Leave blank to keep current password
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Confirm Password</label>
+      <input class="fc" type="password" id="pmConfirmPassword" placeholder="Confirm new password">
+    </div>
+    <div class="fg" style="display:flex;align-content: center;">
+      <button class="btn btn-outline btn-sm" id="pmSendResetLink" style="width:100%;">
+        <i class="fas fa-envelope"></i> Send Reset Link
+      </button>
+    </div>
+  </div>
+  <div id="pmPasswordStrength" style="margin-top:0.5rem;font-size:0.7rem;"></div>
+  
+  <hr class="div">
+  <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:0.85rem;margin-bottom:0.75rem;color:var(--text3);text-transform:uppercase;letter-spacing:1px;">Avatar Color</div>
+  <div class="avatar-options" id="avColorOpts"></div>
+  <div class="fg" style="margin-top:1rem;"><label class="fl">Or Upload Photo</label>
+    <div class="file-drop" id="avUploadDrop"><i class="fas fa-camera" style="color:var(--accent);margin-right:0.5rem;"></i>Click to upload profile photo</div>
+  </div>
+</div>
+
+<div id="pmPerf" style="display:none;padding:1.25rem 1.5rem;">
+  <div class="grid3" style="margin-bottom:1.2rem;">
+    <div class="smini"><div class="snum" id="pf_tasks">0</div><div class="slbl">Tasks Completed</div></div>
+    <div class="smini"><div class="snum" id="pf_proc">0</div><div class="slbl">In Processing</div></div>
+    <div class="smini"><div class="snum" id="pf_pend">0</div><div class="slbl">Pending</div></div>
+    <div class="smini"><div class="snum" id="pf_issues">0</div><div class="slbl">Issues Reported</div></div>
+    <div class="smini"><div class="snum" id="pf_rating">0</div><div class="slbl">Rating /5</div></div>
+    <div class="smini"><div class="snum" id="pf_attendance">0%</div><div class="slbl">Attendance</div></div>
+  </div>
+
+  <div style="height: 250px; position: relative; margin-top: 1rem;">
+    <canvas id="pmPerfChart" style="width: 100%; height: 100%;"></canvas>
+  </div>
+</div>
+
+      <div id="pmDocs" style="display:none;padding:1.25rem 1.5rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.85rem;">
+          <div style="font-weight:600;">Documents &amp; Files</div>
+          <button class="btn btn-accent btn-sm" id="pmAddDocBtn"><i class="fas fa-plus"></i> Add</button>
+        </div>
+        <div id="pmDocsList"></div>
+      </div>
+
+      <div id="pmHist" style="display:none;padding:1.25rem 1.5rem;">
+        <div id="pmHistList"></div>
+      </div>
+
+<div id="pmIdCard" style="display:none;padding:1.25rem 1.5rem;">
+  <div class="grid2" style="gap: 1.5rem;">
+    <!-- ID Card -->
+    <div>
+      <div class="id-card" id="idCardEl">
+        <!-- Left Section -->
+        <div class="id-card-left">
+          <div class="id-card-logo">NIXERS<span>.pro</span></div>
+          <div class="id-av" id="icAv">A</div>
+          <div class="id-name" id="icName">-</div>
+          <div class="id-role" id="icRole">-</div>
+        </div>
+        
+        <!-- Divider (hidden on mobile) -->
+        <div class="id-card-divider"></div>
+        
+        <!-- Right Section -->
+        <div class="id-card-right">
+          <div class="id-fields-grid">
+            <div class="id-field">
+              <span class="lbl">Employee ID</span>
+              <span class="val" id="icEmpId">-</span>
+            </div>
+            <div class="id-field">
+              <span class="lbl">ID Card No.</span>
+              <span class="val" id="icIdNum">-</span>
+            </div>
+            <div class="id-field">
+              <span class="lbl">Department</span>
+              <span class="val" id="icDept">-</span>
+            </div>
+            <div class="id-field">
+              <span class="lbl">Date Hired</span>
+              <span class="val" id="icHired">-</span>
+            </div>
+          </div>
+          <div class="id-barcode">
+            <div>||||||||||||||||||||||||||||||||||||</div>
+            <div class="bc-num" id="icBarcode">NX-000-0000</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Account Details Side -->
+    <div>
+      <div style="font-weight:700;margin-bottom:1rem;font-family:'Space Grotesk',sans-serif;font-size:0.9rem;color:var(--text2);">
+        <i class="fas fa-user-circle" style="margin-right:0.5rem;color:var(--accent);"></i>Account Details
+      </div>
+      <div class="info-grid" id="icInfoGrid" style="gap:0.75rem 1rem;"></div>
+      <hr class="div" style="margin: 1rem 0;">
+      <button class="btn btn-accent btn-sm" id="printIdBtn">
+        <i class="fas fa-print"></i> Print ID Card
+      </button>
+    </div>
+  </div>
+</div>
+    </div>
+    <div class="mftr" id="pmFtr">
+      <button class="btn btn-outline btn-sm" data-close="profileModal">Cancel</button>
+      <button class="btn btn-accent btn-sm" id="pmSaveBtn">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Site Modal -->
+<div class="modal-ov" id="siteModal">
+  <div class="modal-box md">
+    <div class="mhdr"><h4><i class="fas fa-building"></i><span id="smTitle">Site</span></h4><button class="xbtn" data-close="siteModal"><i class="fas fa-times"></i></button></div>
+    <div class="mbody">
+      <div class="frow">
+        <div class="fg"><label class="fl">Site Name</label><input class="fc" id="sm_name"></div>
+        <div class="fg"><label class="fl">Manager</label><select class="fc" id="sm_mgr"></select></div>
+        <div class="fg"><label class="fl">Budget</label><input class="fc" id="sm_budget" placeholder="$0.00"></div>
+        <div class="fg"><label class="fl">Spent</label><input class="fc" id="sm_spent" placeholder="$0.00"></div>
+        <div class="fg"><label class="fl">Status</label><select class="fc" id="sm_status"><option value="planning">Planning</option><option value="active">Active</option><option value="completed">Completed</option><option value="on-hold">On Hold</option></select></div>
+        <div class="fg"><label class="fl">Start Date</label><input class="fc" id="sm_start" type="date"></div>
+        <div class="fg"><label class="fl">Expected End</label><input class="fc" id="sm_end" type="date"></div>
+      </div>
+   <div class="fg">
+  <label class="fl">Progress (%)</label>
+  <input class="fc" id="sm_prog" type="number" min="0" max="100" value="0">
+</div>
+
+<!-- Worker Assignment Section (same pattern as posts and projects) -->
+<div class="fg">
+  <label class="fl">Assign Workers</label>
+  <div class="assign-search-wrap">
+    <input class="fc" id="sm_workerSearch" placeholder="Search workers by name...">
+    <div class="assign-results" id="sm_workerResults"></div>
+  </div>
+  <div class="assign-tags" id="sm_workerTags"></div>
+</div>
+
+<div class="fg">
+  <label class="fl">Description</label>
+  <textarea class="fc" id="sm_desc" rows="3"></textarea>
+</div>
+    </div>
+    <div class="mftr"><button class="btn btn-outline" data-close="siteModal">Cancel</button><button class="btn btn-accent" id="sm_save">Save</button></div>
+  </div>
+</div>
+
+<!-- Site Detail Modal -->
+<div class="modal-ov" id="siteDetailModal">
+  <div class="modal-box lg">
+    <div class="mhdr"><h4><i class="fas fa-eye"></i><span id="sdTitle">Details</span></h4><button class="xbtn" data-close="siteDetailModal"><i class="fas fa-times"></i></button></div>
+    <div class="mbody" id="sdBody"></div>
+    <div class="mftr"><button class="btn btn-outline" data-close="siteDetailModal">Close</button></div>
+  </div>
+</div>
+
+<!-- Post Modal -->
+<div class="modal-ov" id="postModal">
+  <div class="modal-box lg">
+    <div class="mhdr"><h4><i class="fas fa-newspaper"></i><span id="pomTitle">Post</span></h4><button class="xbtn" data-close="postModal"><i class="fas fa-times"></i></button></div>
+    <div class="mbody">
+      <div class="frow">
+        <div class="fg" style="grid-column:1/-1;"><label class="fl">Title</label><input class="fc" id="pm_title"></div>
+        <div class="fg"><label class="fl">Category</label><select class="fc" id="pm_cat"></select></div>
+        <div class="fg"><label class="fl">Visibility</label>
+          <select class="fc" id="pm_vis">
+            <option value="all">Everyone</option>
+            <option value="managers">Managers Only</option>
+            <option value="workers">Workers Only</option>
+            <option value="hidden">Hidden</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg"><label class="fl">Content</label><textarea class="fc" id="pm_content" rows="4"></textarea></div>
+      <div class="fg">
+        <label class="fl">Location (optional)</label>
+        <div class="location-input-row">
+          <input class="fc" id="pm_loc" placeholder="Enter site location or address...">
+          <button class="btn btn-outline btn-sm" id="detectLocBtn"><i class="fas fa-map-marker-alt"></i> Detect</button>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Assign To (optional)</label>
+        <div class="assign-search-wrap">
+          <input class="fc" id="pm_assignSearch" placeholder="Search workers by name...">
+          <div class="assign-results" id="pm_assignResults"></div>
+        </div>
+        <div class="assign-tags" id="pm_assignTags"></div>
+      </div>
+      <div class="fg">
+        <label class="fl">Attachments</label>
+        <div style="display:flex;gap:0.6rem;flex-wrap:wrap;margin-bottom:0.6rem;">
+          <div class="voice-rec-btn" id="voiceRecBtn"><i class="fas fa-microphone"></i> Record Voice</div>
+          <button class="btn btn-outline btn-sm" id="pmAttachBtn"><i class="fas fa-paperclip"></i> Attach Files</button>
+          <button class="btn btn-outline btn-sm" id="pmVideoBtn"><i class="fas fa-video"></i> Add Video</button>
+          <input type="file" id="pm_files" multiple style="display:none">
+          <input type="file" id="pm_video" accept="video/*" style="display:none">
+        </div>
+        <div class="attached-files" id="pm_attFiles"></div>
+        <div id="pm_voiceStatus" style="display:none;font-size:0.78rem;color:#f87171;margin-top:0.35rem;"><i class="fas fa-circle" style="animation:pulse 1s infinite;margin-right:0.35rem;"></i>Recording...</div>
+      </div>
+    </div>
+    <div class="mftr"><button class="btn btn-outline" data-close="postModal">Cancel</button><button class="btn btn-accent" id="pm_save">Publish</button></div>
+  </div>
+</div>
+
+<!-- Leave Decision Modal -->
+<div class="modal-ov" id="leaveDecisionModal">
+  <div class="modal-box sm">
+    <div class="mhdr"><h4><i class="fas fa-calendar-check"></i><span id="ldTitle">Leave Decision</span></h4><button class="xbtn" data-close="leaveDecisionModal"><i class="fas fa-times"></i></button></div>
+    <div class="mbody">
+      <div id="ldInfo" style="background:var(--surface2);border-radius:var(--radius-sm);padding:0.75rem;margin-bottom:1rem;font-size:0.83rem;"></div>
+      <div class="fg"><label class="fl">Comment (optional)</label><textarea class="fc" id="ldComment" rows="3" placeholder="Add a comment..."></textarea></div>
+    </div>
+    <div class="mftr">
+      <button class="btn btn-outline" data-close="leaveDecisionModal">Cancel</button>
+      <button class="btn btn-danger btn-sm" id="ldRejectBtn"><i class="fas fa-times"></i> Reject</button>
+      <button class="btn btn-accent btn-sm" id="ldApproveBtn"><i class="fas fa-check"></i> Approve</button>
+    </div>
+  </div>
+</div>
+
+<!-- Task Modal -->
+<div class="modal-ov" id="taskModal">
+  <div class="modal-box md">
+    <div class="mhdr"><h4><i class="fas fa-list-check"></i><span id="tmTitle">Task</span></h4><button class="xbtn" data-close="taskModal"><i class="fas fa-times"></i></button></div>
+    <div class="mbody">
+      <div class="fg"><label class="fl">Task Title</label><input class="fc" id="tm_title"></div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Project</label><select class="fc" id="tm_project"></select></div>
+        <div class="fg"><label class="fl">Priority</label><select class="fc" id="tm_priority"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
+        <div class="fg" style="grid-column:1/-1;"><label class="fl">Assignees</label><div class="assign-search-wrap"><input class="fc" id="tm_assigneeSearch" placeholder="Search team members..."><div class="assign-results" id="tm_assigneeResults"></div></div><div class="assign-tags" id="tm_assigneeTags"></div></div>
+        <div class="fg"><label class="fl">Due Date</label><input class="fc" id="tm_due" type="date"></div>
+      </div>
+      <div class="fg"><label class="fl">Description</label><textarea class="fc" id="tm_desc" rows="3"></textarea></div>
+            <div class="fg">
+        <label class="fl">Attachments</label>
+        <div style="display:flex;gap:0.6rem;flex-wrap:wrap;margin-bottom:0.6rem;">
+          <div class="voice-rec-btn" id="tm_voiceBtn"><i class="fas fa-microphone"></i> Record Voice</div>
+          <button class="btn btn-outline btn-sm" id="tm_attachBtn"><i class="fas fa-paperclip"></i> Attach Files</button>
+          <input type="file" id="tm_files" multiple style="display:none">
+        </div>
+        <div class="attached-files" id="tm_attFiles"></div>
+        <div id="tm_voiceStatus" style="display:none;font-size:0.78rem;color:#f87171;margin-top:0.35rem;"><i class="fas fa-circle" style="animation:pulse 1s infinite;margin-right:0.35rem;"></i>Recording...</div>
+      </div>
+      <div class="fg"><label class="fl">Status</label><select class="fc" id="tm_status"><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="review">Review</option><option value="done">Done</option></select></div>
+    </div>
+    <div class="mftr"><button class="btn btn-outline" data-close="taskModal">Cancel</button><button class="btn btn-accent" id="tm_save">Save Task</button></div>
+  </div>
+</div>
+
+<!-- Project Modal -->
+<div class="modal-ov" id="projectModal">
+  <div class="modal-box md">
+    <div class="mhdr"><h4><i class="fas fa-folder-open"></i><span id="projTitle">Project</span></h4><button class="xbtn" data-close="projectModal"><i class="fas fa-times"></i></button></div>
+    <div class="mbody">
+      <div class="fg"><label class="fl">Project Name</label><input class="fc" id="proj_name"></div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Status</label><select class="fc" id="proj_status"><option value="planning">Planning</option><option value="active">Active</option><option value="completed">Completed</option><option value="on-hold">On Hold</option></select></div>
+        <div class="fg"><label class="fl">Priority</label><select class="fc" id="proj_priority"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
+        <div class="fg"><label class="fl">Due Date</label><input class="fc" id="proj_due" type="date"></div>
+        <div class="fg"><label class="fl">Site</label><select class="fc" id="proj_site"></select></div>
+      </div>
+      <div class="fg"><label class="fl">Description</label><textarea class="fc" id="proj_desc" rows="3"></textarea></div>
+      <div class="fg">
+        <label class="fl">Assign Team</label>
+        <div class="assign-search-wrap"><input class="fc" id="proj_teamSearch" placeholder="Search users..."><div class="assign-results" id="proj_teamResults"></div></div>
+        <div class="assign-tags" id="proj_teamTags"></div>
+      </div>
+    </div>
+    <div class="mftr"><button class="btn btn-outline" data-close="projectModal">Cancel</button><button class="btn btn-accent" id="proj_save">Save</button></div>
+  </div>
+</div>
+
+<!-- Equipment Modal -->
+<div class="modal-ov" id="equipModal">
+  <div class="modal-box md">
+    <div class="mhdr"><h4><i class="fas fa-toolbox"></i><span id="eqTitle">Equipment</span></h4><button class="xbtn" data-close="equipModal"><i class="fas fa-times"></i></button></div>
+    <div class="mbody">
+      <div class="frow">
+        <div class="fg"><label class="fl">Item Name</label><input class="fc" id="eq_name"></div>
+        <div class="fg"><label class="fl">Category</label><input class="fc" id="eq_cat" placeholder="e.g. Power Tool"></div>
+        <div class="fg"><label class="fl">Serial Number</label><input class="fc" id="eq_serial"></div>
+        <div class="fg"><label class="fl">Condition</label><select class="fc" id="eq_condition"><option value="good">Good</option><option value="fair">Fair</option><option value="damaged">Damaged</option></select></div>
+        <div class="fg"><label class="fl">Assigned To</label><select class="fc" id="eq_assignee"></select></div>
+        <div class="fg"><label class="fl">Site</label><select class="fc" id="eq_site"></select></div>
+        <div class="fg"><label class="fl">Next Service Date</label><input class="fc" id="eq_service" type="date"></div>
+        <div class="fg"><label class="fl">Status</label><select class="fc" id="eq_status"><option value="available">Available</option><option value="checked-out">Checked Out</option><option value="maintenance">Maintenance</option></select></div>
+      </div>
+    </div>
+    <div class="mftr"><button class="btn btn-outline" data-close="equipModal">Cancel</button><button class="btn btn-accent" id="eq_save">Save</button></div>
+  </div>
+</div>
+
+<!-- Incident Modal -->
+<div class="modal-ov" id="incidentModal">
+  <div class="modal-box md">
+    <div class="mhdr"><h4><i class="fas fa-triangle-exclamation"></i>Report Incident</h4><button class="xbtn" data-close="incidentModal"><i class="fas fa-times"></i></button></div>
+    <div class="mbody">
+      <div class="frow">
+        <div class="fg"><label class="fl">Date &amp; Time</label><input class="fc" id="inc_date" type="datetime-local"></div>
+        <div class="fg"><label class="fl">Site</label><select class="fc" id="inc_site"></select></div>
+        <div class="fg"><label class="fl">Type</label><select class="fc" id="inc_type"><option value="injury">Injury</option><option value="near-miss">Near Miss</option><option value="property">Property Damage</option><option value="fire">Fire</option><option value="other">Other</option></select></div>
+        <div class="fg"><label class="fl">Severity</label><select class="fc" id="inc_severity"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></div>
+      </div>
+      <div class="fg"><label class="fl">Description</label><textarea class="fc" id="inc_desc" rows="4"></textarea></div>
+      <div class="fg"><label class="fl">Immediate Actions Taken</label><textarea class="fc" id="inc_actions" rows="2"></textarea></div>
+    </div>
+    <div class="mftr"><button class="btn btn-outline" data-close="incidentModal">Cancel</button><button class="btn btn-accent" id="inc_save">Submit Report</button></div>
+  </div>
+</div>
+
+<!-- Payslip Modal -->
+<div class="modal-ov" id="payslipModal">
+  <div class="modal-box md">
+    <div class="mhdr"><h4><i class="fas fa-file-invoice-dollar"></i>Payslip</h4><button class="xbtn" data-close="payslipModal"><i class="fas fa-times"></i></button></div>
+    <div class="mbody" id="payslipBody"></div>
+    <div class="mftr">
+      <button class="btn btn-outline" data-close="payslipModal">Close</button>
+      <button class="btn btn-accent btn-sm" id="payslipPrintBtn"><i class="fas fa-print"></i> Print</button>
+      <button class="btn btn-outline btn-sm" id="payslipEmailBtn"><i class="fas fa-envelope"></i> Email</button>
+    </div>
+  </div>
+</div>
+
+<!-- Client Modal -->
+<div class="modal-ov" id="clientModal">
+  <div class="modal-box md">
+    <div class="mhdr"><h4><i class="fas fa-briefcase"></i><span id="clientTitle">Client</span></h4><button class="xbtn" data-close="clientModal"><i class="fas fa-times"></i></button></div>
+    <div class="mbody">
+      <div class="frow">
+        <div class="fg"><label class="fl">Client Name</label><input class="fc" id="cl_name"></div>
+        <div class="fg"><label class="fl">Contact Person</label><input class="fc" id="cl_contact"></div>
+        <div class="fg"><label class="fl">Email</label><input class="fc" id="cl_email" type="email"></div>
+        <div class="fg"><label class="fl">Phone</label><input class="fc" id="cl_phone"></div>
+      </div>
+      <div class="fg"><label class="fl">Assign Sites</label><div id="cl_sitesCheck" style="display:flex;flex-wrap:wrap;gap:0.5rem;"></div></div>
+    </div>
+    <div class="mftr"><button class="btn btn-outline" data-close="clientModal">Cancel</button><button class="btn btn-accent" id="cl_save">Save</button></div>
+  </div>
+</div>
+
+<!-- Ticket Modal -->
+<div class="modal-ov" id="ticketModal">
+  <div class="modal-box md">
+    <div class="mhdr"><h4><i class="fas fa-ticket"></i><span id="ticketTitle">Support Ticket</span></h4><button class="xbtn" data-close="ticketModal"><i class="fas fa-times"></i></button></div>
+    <div class="mbody">
+      <div class="frow">
+        <div class="fg"><label class="fl">Client</label><select class="fc" id="tk_client"></select></div>
+        <div class="fg"><label class="fl">Priority</label><select class="fc" id="tk_priority"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></div>
+        <div class="fg" style="grid-column:1/-1;"><label class="fl">Subject</label><input class="fc" id="tk_subject"></div>
+      </div>
+      <div class="fg"><label class="fl">Description</label><textarea class="fc" id="tk_desc" rows="4"></textarea></div>
+      <div class="fg"><label class="fl">Assign To</label><select class="fc" id="tk_assignee"></select></div>
+    </div>
+    <div class="mftr"><button class="btn btn-outline" data-close="ticketModal">Cancel</button><button class="btn btn-accent" id="tk_save">Save Ticket</button></div>
+  </div>
+</div>
+
+<!-- Create Group Modal -->
+<div class="modal-ov" id="cgModal">
+  <div class="modal-box sm">
+    <div class="mhdr"><h4><i class="fas fa-users"></i>Create Group</h4><button class="xbtn" data-close="cgModal"><i class="fas fa-times"></i></button></div>
+    <div class="mbody">
+      <div class="frow">
+        <div class="fg"><label class="fl">Group Name</label><input class="fc" id="cg_name"></div>
+        <div class="fg"><label class="fl">Icon (emoji)</label><input class="fc" id="cg_icon" placeholder="💬" maxlength="2"></div>
+      </div>
+      <div class="fg"><label class="fl">Description</label><input class="fc" id="cg_desc"></div>
+      <div class="fg"><label class="fl">Members</label>
+        <input class="fc" id="cgMemberSearch" placeholder="Search..." style="margin-bottom:0.5rem;">
+        <div id="cg_members" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:0.25rem;"></div>
+      </div>
+    </div>
+    <div class="mftr"><button class="btn btn-outline" data-close="cgModal">Cancel</button><button class="btn btn-accent" id="cgCreateBtn">Create</button></div>
+  </div>
+</div>
+
+<!-- Group Members Modal -->
+<div class="modal-ov" id="gmModal">
+  <div class="modal-box sm">
+    <div class="mhdr"><h4><i class="fas fa-users"></i>Group Members</h4><button class="xbtn" data-close="gmModal"><i class="fas fa-times"></i></button></div>
+    <div class="mbody" id="gmBody"></div>
+    <div class="mftr"><button class="btn btn-outline" data-close="gmModal">Close</button></div>
+  </div>
+</div>
+
+<!-- Add Category Modal -->
+<div class="modal-ov" id="addCatModal">
+  <div class="modal-box sm">
+    <div class="mhdr"><h4><i class="fas fa-tag"></i>Add Category</h4><button class="xbtn" data-close="addCatModal"><i class="fas fa-times"></i></button></div>
+    <div class="mbody">
+      <div class="fg"><label class="fl">Category Name</label><input class="fc" id="cat_name"></div>
+      <div class="fg"><label class="fl">Color</label><input class="fc" id="cat_color" type="color" value="#eab308"></div>
+      <div class="fg"><label class="fl">Icon (FontAwesome class)</label><input class="fc" id="cat_icon" placeholder="fa-tag"></div>
+    </div>
+    <div class="mftr"><button class="btn btn-outline" data-close="addCatModal">Cancel</button><button class="btn btn-accent" id="addCatSaveBtn">Add</button></div>
+  </div>
+</div>
+
+<!-- User Approval Modal -->
+<div class="modal-ov" id="approvalModal">
+  <div class="modal-box sm">
+    <div class="mhdr"><h4><i class="fas fa-user-check"></i>User Approval</h4><button class="xbtn" data-close="approvalModal"><i class="fas fa-times"></i></button></div>
+    <div class="mbody">
+      <div id="approvalInfo" style="margin-bottom:1rem;"></div>
+      <div class="fg"><label class="fl">Comment (optional)</label><textarea class="fc" id="approvalComment" rows="2"></textarea></div>
+    </div>
+    <div class="mftr">
+      <button class="btn btn-outline" data-close="approvalModal">Cancel</button>
+      <button class="btn btn-danger btn-sm" id="approvalRejectBtn"><i class="fas fa-times"></i> Reject</button>
+      <button class="btn btn-accent btn-sm" id="approvalApproveBtn"><i class="fas fa-check"></i> Approve</button>
+    </div>
+  </div>
+</div>
+
+<!-- QR Code Modal -->
+<div class="modal-ov" id="qrModal">
+  <div class="modal-box sm">
+    <div class="mhdr"><h4><i class="fas fa-qrcode"></i>QR Code</h4><button class="xbtn" data-close="qrModal"><i class="fas fa-times"></i></button></div>
+    <div class="mbody" style="text-align:center;" id="qrBody"></div>
+    <div class="mftr"><button class="btn btn-outline" data-close="qrModal">Close</button></div>
+  </div>
+</div>
+
+<!-- RBAC Role Modal -->
+<div class="modal-ov" id="roleModal">
+  <div class="modal-box sm">
+    <div class="mhdr"><h4><i class="fas fa-user-tag"></i><span id="roleModalTitle">Create Role</span></h4><button class="xbtn" data-close="roleModal"><i class="fas fa-times"></i></button></div>
+    <div class="mbody">
+      <div class="fg"><label class="fl">Role Name</label><input class="fc" id="rm_name"></div>
+      <div class="fg"><label class="fl">Badge Color</label><input class="fc" id="rm_color" type="color" value="#3b82f6"></div>
+      <div class="fg"><label class="fl">Permissions</label><div id="rm_perms" style="display:flex;flex-direction:column;gap:0.3rem;max-height:200px;overflow-y:auto;"></div></div>
+    </div>
+    <div class="mftr"><button class="btn btn-outline" data-close="roleModal">Cancel</button><button class="btn btn-accent" id="rm_save">Save Role</button></div>
+  </div>
+</div>
+
+<!-- ===================== FLOATING CHAT ===================== -->
+<div class="fc-btn" id="fcBtn"><i class="fas fa-comment-dots"></i></div>
+<div class="fc-widget" id="fcWidget">
+  <div class="fc-hdr">
+   <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:0.88rem;">Quick Chat</div>
+    <div style="font-size:0.72rem;color:var(--text3);margin-left:auto;">All Users</div>
+    <button style="background:none;border:none;color:var(--text3);cursor:pointer;margin-left:0.5rem;" id="fcCloseBtn"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="fc-msgs" id="fcMsgs"></div>
+  <div class="fc-inp">
+    <input type="text" id="fcInput" placeholder="Message...">
+    <button class="btn btn-accent btn-sm" id="fcSendBtn"><i class="fas fa-paper-plane"></i></button>
+  </div>
+</div>
+
+<!-- ===================== TOAST ===================== -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- ===================== BREADCRUMB ===================== -->
+<div class="breadcrumb-bar" id="breadcrumbBar" style="display:none;">
+  <i class="fas fa-house"></i>
+  <span id="breadcrumbText"></span>
+</div>
+
+<!-- ===================== SKELETON LOADER ===================== -->
+<div class="skeleton-overlay" id="skeletonOverlay" style="display:none;">
+  <div class="skeleton-table">
+    <div class="skel-row" style="height:38px;margin-bottom:8px;"></div>
+    <div class="skel-row"></div>
+    <div class="skel-row"></div>
+    <div class="skel-row"></div>
+    <div class="skel-row"></div>
+    <div class="skel-row"></div>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/manager.js"></script>
+</body>
+</html>
