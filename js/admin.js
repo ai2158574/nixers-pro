@@ -2103,256 +2103,731 @@ function renderEmailTemplates() {
 }
 
 /* ============================================================
-   25. SAFETY & INCIDENTS
+   25. SAFETY & INCIDENTS (MERGED — Incidents + Hazards unified)
    ============================================================ */
-function renderSafety() {
-  document.querySelectorAll('[id^="st-"]').forEach(el => el.style.display = 'none');
-  const overviewEl = document.getElementById('st-overview');
-  if (overviewEl) overviewEl.style.display = 'block';
-  wireSTabs();
-  renderSafetyOverview();
-  const activeTab = document.querySelector('[data-stab].active');
-  const activeTabName = activeTab?.dataset.stab || 'overview';
-  if      (activeTabName === 'inductions') filterAndUpdateInductions();
-  else if (activeTabName === 'hazards')    filterAndUpdateHazards();
-  else if (activeTabName === 'incidents')  filterAndUpdateIncidents();
-  else if (activeTabName === 'training')   filterAndUpdateTraining();
-  else {
-    if ($('indTbody'))      $('indTbody').innerHTML = '';
-    if ($('hazTbody'))      $('hazTbody').innerHTML = '';
-    if ($('incTbody'))      $('incTbody').innerHTML = '';
-    if ($('trainingTbody')) $('trainingTbody').innerHTML = '';
+
+/* ── Modal builder (runs once, idempotent) ─────────────────── */
+function createMergedSafetyModal() {
+  if ($('mergedSafetyModal')) return;          /* already exists */
+  
+  const siteOpts = DB.sites.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+  
+  document.body.insertAdjacentHTML('beforeend', `
+    <div class="modal-ov" id="mergedSafetyModal">
+      <div class="modal-box md">
+        <div class="mhdr">
+          <h4><i class="fas fa-shield-halved"></i> Report Incident / Hazard</h4>
+          <button class="xbtn" data-close="mergedSafetyModal"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="mbody">
+          <div class="frow">
+            <div class="fg">
+              <label class="fl">Date &amp; Time</label>
+              <input class="fc" id="ms_date" type="datetime-local">
+            </div>
+            <div class="fg">
+              <label class="fl">Site</label>
+              <select class="fc" id="ms_site">
+                <option value="">Select Site</option>
+                ${siteOpts}
+              </select>
+            </div>
+          </div>
+          <div class="frow">
+            <div class="fg">
+              <label class="fl">Type</label>
+              <select class="fc" id="ms_type">
+                <option value="injury">Injury</option>
+                <option value="near-miss">Near Miss</option>
+                <option value="property">Property Damage</option>
+                <option value="hazard">Hazard</option>
+                <option value="fire">Fire</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label class="fl">Severity</label>
+              <select class="fc" id="ms_severity">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+              </select>
+            </div>
+          </div>
+          <div class="fg">
+            <label class="fl">Description</label>
+            <textarea class="fc" id="ms_desc" rows="4" placeholder="Describe the incident or hazard in detail..."></textarea>
+          </div>
+          <div class="fg">
+            <label class="fl">Immediate Actions Taken</label>
+            <textarea class="fc" id="ms_actions" rows="2" placeholder="What actions were taken immediately?"></textarea>
+          </div>
+        </div>
+        <div class="mftr">
+          <button class="btn btn-outline" data-close="mergedSafetyModal">Cancel</button>
+          <button class="btn btn-accent" id="ms_save"><i class="fas fa-paper-plane"></i> Submit Report</button>
+        </div>
+      </div>
+    </div>`);
+  
+  // Bind save event - remove any existing listener first
+  const saveBtn = $('ms_save');
+  if (saveBtn) {
+    const newBtn = saveBtn.cloneNode(true);
+    saveBtn.parentNode.replaceChild(newBtn, saveBtn);
+    newBtn.addEventListener('click', saveMergedSafetyItem);
   }
-  renderChecklist(); renderSafetyScores(); populateSafetySelects();
-  $('reportIncidentBtn')?.addEventListener('click', () => openM('incidentModal'));
-  $('inc_save')?.addEventListener('click', saveIncident);
-  $('incExport')?.addEventListener('click', () => exportCSV(DB.incidents, 'incidents.csv'));
-  $('addTrainingBtn')?.addEventListener('click', () => toast('Training record form (demo)', 'info'));
-  ['incSeverity','incSite'].forEach(id => $(id)?.addEventListener('change', filterAndUpdateIncidents));
-  ['indSearch','indStatus'].forEach(id => $(id)?.addEventListener('input', filterAndUpdateInductions));
-  ['hazSearch','hazStatus','hazType'].forEach(id => $(id)?.addEventListener('input', filterAndUpdateHazards));
-  $('hazApply')?.addEventListener('click', filterAndUpdateHazards);
-  $('safeRptGenerate')?.addEventListener('click', generateSafetyExport);
-  if ($('safeRptFrom') && !$('safeRptFrom').value) $('safeRptFrom').value = new Date().toISOString().slice(0, 10);
-  if ($('safeRptTo')   && !$('safeRptTo').value)   $('safeRptTo').value   = new Date().toISOString().slice(0, 10);
 }
 
-function wireSTabs() {
-  const panels = { overview: 'st-overview', inductions: 'st-inductions', hazards: 'st-hazards', exports: 'st-exports', incidents: 'st-incidents', checklist: 'st-checklist', training: 'st-training', score: 'st-score' };
+/* ── Open modal: reset fields + populate sites fresh ────────── */
+function openMergedSafetyModal() {
+  createMergedSafetyModal();   /* no-op if already exists */
+
+  /* Always refresh site list in case sites changed */
+  const siteSelect = $('ms_site');
+  if (siteSelect) {
+    siteSelect.innerHTML = '<option value="">Select Site</option>' + DB.sites.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    /* Pre-select first site so siteId is never empty */
+    if (DB.sites.length) siteSelect.value = String(DB.sites[0].id);
+  }
+
+  /* Reset all fields */
+  const dateInput = $('ms_date');
+  if (dateInput) dateInput.value = new Date().toISOString().slice(0, 16);
+  
+  const typeSelect = $('ms_type');
+  if (typeSelect) typeSelect.value = 'injury';
+  
+  const severitySelect = $('ms_severity');
+  if (severitySelect) severitySelect.value = 'medium';
+  
+  const descTextarea = $('ms_desc');
+  if (descTextarea) descTextarea.value = '';
+  
+  const actionsTextarea = $('ms_actions');
+  if (actionsTextarea) actionsTextarea.value = '';
+
+  openM('mergedSafetyModal');
+}
+
+/* ── Save merged safety item ───────────────────────────────── */
+function saveMergedSafetyItem() {
+  const dateEl = $('ms_date');
+  const siteEl = $('ms_site');
+  const typeEl = $('ms_type');
+  const severityEl = $('ms_severity');
+  const descEl = $('ms_desc');
+  const actionsEl = $('ms_actions');
+
+  /* Validation */
+  const desc = descEl?.value.trim();
+  if (!desc) {
+    toast('Description is required', 'error');
+    descEl?.focus();
+    return;
+  }
+
+  const siteId = siteEl?.value ? +siteEl.value : (DB.sites[0]?.id || 1);
+  if (!siteId || siteEl?.value === '') {
+    toast('Please select a site', 'error');
+    siteEl?.focus();
+    return;
+  }
+
+  // Initialize nextId.incidents if it doesn't exist
+  if (!nextId['incidents']) {
+    nextId['incidents'] = (DB.incidents?.length || 0) + 1;
+  }
+
+  const entry = {
+    id:         nextId['incidents']++,
+    date:       dateEl?.value || nowStr(),
+    siteId:     siteId,
+    reporterId: currentUser.id,
+    type:       typeEl?.value || 'other',
+    severity:   severityEl?.value || 'medium',
+    desc:       desc,
+    actions:    actionsEl?.value.trim() || '',
+    status:     'open',
+  };
+
+  // Initialize DB.incidents if it doesn't exist
+  if (!DB.incidents) DB.incidents = [];
+  
+  DB.incidents.unshift(entry);
+  logAction('create', 'Safety Issue', `${entry.severity} ${entry.type} at site #${entry.siteId}`);
+
+  /* Close modal */
+  closeM('mergedSafetyModal');
+
+  /* Refresh all views */
+  renderSafetyOverview();
+  renderSafetyScores();
+  
+  /* Refresh the merged table if that tab is active or not (always refresh data) */
+  filterAndUpdateMergedSafety();
+
+  if (entry.severity === 'critical') {
+    toast('⚠️ Critical alert — administrators notified', 'warn', 4000);
+  }
+  
+  toast(`${entry.type.charAt(0).toUpperCase() + entry.type.slice(1)} reported successfully`, 'success');
+}
+
+/* ── Main render ───────────────────────────────────────────── */
+function renderSafety() {
+  createMergedSafetyModal();
+  createSafetyDetailModal(); // Create the detail modal
+  
+  /* Tab panel map — matches data-stab values in the HTML */
+  const PANELS = {
+    overview:           'st-overview',
+    inductions:         'st-inductions',
+    'incidents-hazards':'st-incidents-hazards',
+    exports:            'st-exports',
+    checklist:          'st-checklist',
+    training:           'st-training',
+    score:              'st-score',
+  };
+ 
+  /* Hide all panels; show overview by default */
+  Object.values(PANELS).forEach(id => { const el=$(id); if(el) el.style.display='none'; });
+  const overviewEl = $('st-overview');
+  if (overviewEl) overviewEl.style.display = '';
+ 
+  /* Wire tab buttons (clone to avoid duplicate listeners) */
   $$('[data-stab]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      $$('[data-stab]').forEach(b => b.classList.remove('active')); btn.classList.add('active');
-      Object.values(panels).forEach(id => { const el = $(id); if (el) el.style.display = 'none'; });
-      const target = $(panels[btn.dataset.stab]); if (target) target.style.display = '';
-      const t = btn.dataset.stab;
-      if      (t === 'inductions') filterAndUpdateInductions();
-      else if (t === 'hazards')    filterAndUpdateHazards();
-      else if (t === 'incidents')  filterAndUpdateIncidents();
-      else if (t === 'training')   filterAndUpdateTraining();
+    const fresh = btn.cloneNode(true);
+    btn.parentNode.replaceChild(fresh, btn);
+    fresh.addEventListener('click', () => {
+      $$('[data-stab]').forEach(b => b.classList.remove('active'));
+      fresh.classList.add('active');
+      Object.values(PANELS).forEach(id => { const el=$(id); if(el) el.style.display='none'; });
+      const target = $(PANELS[fresh.dataset.stab]);
+      if (target) target.style.display = '';
+      /* Lazy-load tab content */
+      switch (fresh.dataset.stab) {
+        case 'overview':          renderSafetyOverview(); renderSafetyScores(); break;
+        case 'inductions':        filterAndUpdateInductions(); break;
+        case 'incidents-hazards': filterAndUpdateMergedSafety(); break;
+        case 'checklist':         renderChecklist(); break;
+        case 'training':          filterAndUpdateTraining(); break;
+        case 'score':             renderSafetyScores(); break;
+      }
     });
   });
+ 
+  /* Populate all site selects */
+  populateSafetySelects();
+ 
+  /* Wire "Report" button (clone to avoid duplicates) */
+  const rBtn = $('reportIncidentBtn');
+  if (rBtn) {
+    const fresh = rBtn.cloneNode(true);
+    rBtn.parentNode.replaceChild(fresh, rBtn);
+    fresh.addEventListener('click', openMergedSafetyModal);
+  }
+ 
+  /* Other action buttons */
+  $('incExport')?.addEventListener('click', () => exportCSV(DB.incidents, 'incidents_hazards.csv'));
+  $('addTrainingBtn')?.addEventListener('click', () => toast('Training form — coming soon', 'info'));
+  $('safeRptGenerate')?.addEventListener('click', generateSafetyReport);
+ 
+  /* Filter listeners for merged table */
+  ['incSeverity','incSite','mergedStatusFilter'].forEach(id => {
+    const el = $(id); if (!el) return;
+    const fresh = el.cloneNode(true);
+    el.parentNode.replaceChild(fresh, el);
+    fresh.addEventListener('change', filterAndUpdateMergedSafety);
+  });
+ 
+  /* Filter listeners for inductions */
+  ['indSearch','indStatus'].forEach(id => {
+    const el = $(id);
+    if (el) {
+      const fresh = el.cloneNode(true);
+      el.parentNode.replaceChild(fresh, el);
+      fresh.addEventListener('input', filterAndUpdateInductions);
+    }
+  });
+ 
+  /* Set active tab highlight on first load */
+  const firstActive = document.querySelector('[data-stab].active');
+  if (!firstActive) {
+    const overviewBtn = document.querySelector('[data-stab="overview"]');
+    if (overviewBtn) overviewBtn.classList.add('active');
+  }
+ 
+  /* Default data loads */
+  renderSafetyOverview();
+  renderChecklist();
+  renderSafetyScores();
+ 
+  /* Default export dates */
+  if ($('safeRptFrom') && !$('safeRptFrom').value) $('safeRptFrom').value = new Date().toISOString().slice(0,10);
+  if ($('safeRptTo') && !$('safeRptTo').value) $('safeRptTo').value = new Date().toISOString().slice(0,10);
 }
 
+/* ── Create Safety Detail Modal (matches other popup designs) ── */
+function createSafetyDetailModal() {
+  if ($('safetyDetailModal')) return;
+  
+  document.body.insertAdjacentHTML('beforeend', `
+    <div class="modal-ov" id="safetyDetailModal">
+      <div class="modal-box lg">
+        <div class="mhdr">
+          <h4><i class="fas fa-shield-halved"></i> <span id="sdTitle">Incident / Hazard Details</span></h4>
+          <button class="xbtn" data-close="safetyDetailModal"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="mbody" id="safetyDetailBody"></div>
+        <div class="mftr">
+          <button class="btn btn-outline" data-close="safetyDetailModal">Close</button>
+          <button class="btn btn-accent btn-sm" id="safetyDetailResolveBtn" style="display:none;"><i class="fas fa-check"></i> Resolve</button>
+          <button class="btn btn-danger btn-sm" id="safetyDetailDeleteBtn" style="display:none;"><i class="fas fa-trash"></i> Delete</button>
+        </div>
+      </div>
+    </div>
+  `);
+}
+ 
+/* ── Site select populator ─────────────────────────────────── */
 function populateSafetySelects() {
-  const siteOpts = '<option value="">All Sites</option>' + DB.sites.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-  ['incSite','checklistSite','inc_site','safeActiveSite'].forEach(id => { const el = $(id); if (el) el.innerHTML = siteOpts; });
+  const allOpt  = '<option value="">All Sites</option>';
+  const selOpt  = '<option value="">Select a site</option>';
+  const siteOpts = DB.sites.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+  
+  const incSite = $('incSite');
+  if (incSite) incSite.innerHTML = allOpt + siteOpts;
+  
+  const checklistSite = $('checklistSite');
+  if (checklistSite) checklistSite.innerHTML = allOpt + siteOpts;
+  
+  const safeActiveSite = $('safeActiveSite');
+  if (safeActiveSite) safeActiveSite.innerHTML = selOpt + siteOpts;
+  
+  const msSite = $('ms_site');
+  if (msSite) msSite.innerHTML = selOpt + siteOpts;
 }
-
+ 
+/* ── Overview stats ────────────────────────────────────────── */
 function renderSafetyOverview() {
-  const openHazards    = DB.incidents.filter(i => i.status === 'open').length;
-  const overdueHazards = DB.incidents.filter(i => i.status === 'open' && i.severity !== 'low').length;
+  const el = $('safeOverviewStats'); if (!el) return;
+  const total    = DB.incidents?.length || 0;
+  const open     = (DB.incidents || []).filter(i => i.status === 'open').length;
+  const critical = (DB.incidents || []).filter(i => i.severity === 'critical').length;
   const inducted = DB.users.filter(u => u.status === 'active').length;
-  $('safeOverviewStats').innerHTML =
-    statCard('fa-users',              'blue',  DB.users.length, 'Total Workers',      '', 'flat') +
-    statCard('fa-user-check',         'green', inducted,        'Inducted',           '', 'flat') +
-    statCard('fa-triangle-exclamation','red',  openHazards,     'Open Safety Issues', '', 'flat') +
-    statCard('fa-clock',              'yellow',overdueHazards,  'Overdue Hazards',    '', 'flat');
+  el.innerHTML =
+    statCard('fa-users',               'blue',   DB.users.length, 'Total Workers',   '', 'flat') +
+    statCard('fa-user-check',          'green',  inducted,        'Active / Inducted','', 'flat') +
+    statCard('fa-triangle-exclamation','red',    open,            'Open Issues',      open > 0 ? 'Action needed' : '', open > 0 ? 'down' : 'flat') +
+    statCard('fa-skull-crossbones',    'orange', critical,        'Critical',         critical > 0 ? 'Urgent' : '', critical > 0 ? 'down' : 'flat');
 }
-
-function filterAndUpdateInductions() {
-  const q  = ($('indSearch')?.value  || '').toLowerCase();
-  const st = $('indStatus')?.value || '';
-  const statusMap = ['Inducted','Pending Review','In Progress','Not Started','Expired'];
-  let inductionData = DB.users.filter(u => u.role !== 'admin').map((u, idx) => ({
-    user: u,
-    company: siteById(DB.sites[idx % DB.sites.length]?.id)?.name || 'Main Contractor',
-    status: statusMap[idx % statusMap.length],
-    updated: nowStr().slice(0, 10)
-  })).filter(r => (!q || r.user.name.toLowerCase().includes(q) || r.company.toLowerCase().includes(q)) && (!st || r.status === st));
-  createPaginator('indTbody', inductionData, renderInductionsBody, { perPage: 10 });
+ 
+/* ── Merged Incidents & Hazards ────────────────────────────── */
+function filterAndUpdateMergedSafety() {
+  const severity     = $('incSeverity')?.value       || '';
+  const siteId       = +($('incSite')?.value         || 0);
+  const statusFilter = $('mergedStatusFilter')?.value || '';
+ 
+  let filtered = (DB.incidents || []).filter(i =>
+    (!severity     || i.severity === severity) &&
+    (!siteId       || i.siteId   === siteId)   &&
+    (!statusFilter || i.status   === statusFilter)
+  );
+  filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+ 
+  /* Stats banner */
+  const statsEl = $('safetyStats');
+  if (statsEl) {
+    const crit  = filtered.filter(i => i.severity === 'critical').length;
+    const high  = filtered.filter(i => i.severity === 'high').length;
+    const open  = filtered.filter(i => i.status   === 'open').length;
+    const res   = filtered.filter(i => i.status   === 'resolved').length;
+    statsEl.innerHTML =
+      statCard('fa-list',                'blue',   filtered.length, 'Total Records',  '', 'flat') +
+      statCard('fa-skull-crossbones',    'red',    crit,            'Critical',        '', crit > 0 ? 'down' : 'flat') +
+      statCard('fa-triangle-exclamation','orange', high,            'High Severity',   '', 'flat') +
+      statCard('fa-folder-open',         'yellow', open,            'Open',            '', 'flat') +
+      statCard('fa-check-circle',        'green',  res,             'Resolved',        '', 'flat');
+  }
+ 
+  createPaginator('mergedSafetyTbody', filtered, renderMergedSafetyBody, { perPage: 10 });
 }
-
-function renderInductionsBody(rows) {
-  if (!rows.length) { $('indTbody').innerHTML = '<tr><td colspan="4"><div class="empty-state"><i class="fas fa-id-card"></i>No inductions found</div></td></tr>'; return; }
-  $('indTbody').innerHTML = rows.map(r => `<tr>
-    <td><div class="user-cell">${avatarEl(r.user, 26)}<span>${r.user.name}</span></div></td>
-    <td>${r.company}</td>
-    <td>${statusBadge(r.status.toLowerCase().replace(/\s+/g, '') === 'inducted' ? 'active' : r.status === 'Expired' ? 'inactive' : 'pending')}</td>
-    <td style="font-size:0.76rem;">${r.updated}</td>
-  </tr>`).join('');
-}
-
-function filterAndUpdateHazards() {
-  const q    = ($('hazSearch')?.value || '').toLowerCase();
-  const st   = $('hazStatus')?.value || '';
-  const type = $('hazType')?.value   || '';
-  const filtered = DB.incidents.filter(i => {
-    if (st   && i.status !== st)  return false;
-    if (type && i.type   !== type) return false;
-    if (q    && !(`${i.desc} ${siteById(i.siteId)?.name || ''}`).toLowerCase().includes(q)) return false;
-    return true;
-  });
-  updateHazardStats();
-  createPaginator('hazTbody', filtered, renderHazardsBody, { perPage: 10 });
-}
-
-function updateHazardStats() {
-  $('hazardStats').innerHTML =
-    statCard('fa-folder-open','yellow', DB.incidents.filter(i => i.status === 'open').length,                                  'Open',    '', 'flat') +
-    statCard('fa-clock',      'red',    DB.incidents.filter(i => i.status === 'open' && i.severity !== 'low').length,          'Overdue', '', 'flat') +
-    statCard('fa-check',      'green',  DB.incidents.filter(i => i.status === 'resolved').length,                              'Closed',  '', 'flat');
-}
-
-function renderHazardsBody(hazards) {
-  if (!hazards.length) { $('hazTbody').innerHTML = '<tr><td colspan="5"><div class="empty-state"><i class="fas fa-triangle-exclamation"></i>No hazards found</div></td></tr>'; return; }
-  $('hazTbody').innerHTML = hazards.map(i => `<tr>
-    <td style="font-size:0.75rem;">${i.date}</td>
-    <td>${siteById(i.siteId)?.name || '—'}</td>
-    <td><span class="badge b-update">${i.type}</span></td>
-    <td style="font-size:0.8rem;">${i.desc}</td>
-    <td>${statusBadge(i.status === 'open' ? 'active' : 'completed')}</td>
-  </tr>`).join('');
-}
-
-function filterAndUpdateIncidents() {
-  const sev  = $('incSeverity')?.value || '';
-  const site = +$('incSite')?.value    || 0;
-  const filtered = DB.incidents.filter(i => {
-    if (sev  && i.severity !== sev)  return false;
-    if (site && i.siteId   !== site) return false;
-    return true;
-  });
-  updateIncidentStats();
-  createPaginator('incTbody', filtered, renderIncidentsBody, { perPage: 10 });
-}
-
-function updateIncidentStats() {
-  const critical = DB.incidents.filter(i => i.severity === 'critical').length;
-  const open     = DB.incidents.filter(i => i.status === 'open').length;
-  const resolved = DB.incidents.filter(i => i.status === 'resolved').length;
-  $('safetyStats').innerHTML =
-    statCard('fa-triangle-exclamation','red',    DB.incidents.length, 'Total Incidents','', 'flat') +
-    statCard('fa-skull',               'red',    critical,            'Critical',       '', 'flat') +
-    statCard('fa-folder-open',         'yellow', open,                'Open',           '', 'flat') +
-    statCard('fa-check',               'green',  resolved,            'Resolved',       '', 'flat');
-}
-
-function renderIncidentsBody(incidents) {
-  if (!incidents.length) { $('incTbody').innerHTML = '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-shield-check"></i>No incidents found</div></td></tr>'; return; }
-  $('incTbody').innerHTML = incidents.map(i => {
-    const s = siteById(i.siteId); const r = userById(i.reporterId);
+ 
+function renderMergedSafetyBody(incidents) {
+  const tbody = $('mergedSafetyTbody'); if (!tbody) return;
+  if (!incidents.length) {
+    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-shield-check"></i>No incidents or hazards found</div>NonNullable</td></tr>';
+    return;
+  }
+  const typeIcon = { injury:'fa-user-injured', 'near-miss':'fa-eye', property:'fa-building', hazard:'fa-bug', fire:'fa-fire', other:'fa-circle-info' };
+  tbody.innerHTML = incidents.map(item => {
+    const site     = siteById(item.siteId);
+    const reporter = userById(item.reporterId);
+    const icon     = typeIcon[item.type] || 'fa-circle-info';
+    const shortDesc = escapeHtml((item.desc||'').substring(0, 60)) + ((item.desc||'').length > 60 ? '…' : '');
     return `<tr>
-      <td style="font-size:0.75rem;">${i.date}</td>
-      <td style="font-size:0.8rem;">${s?.name || '—'}</td>
-      <td><div class="user-cell">${avatarEl(r, 24)}<span style="font-size:0.78rem;">${r?.name}</span></div></td>
-      <td><span class="badge b-update">${i.type}</span></td>
-      <td>${severityBadge(i.severity)}</td>
-      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.8rem;">${i.desc}</td>
-      <td>${statusBadge(i.status === 'open' ? 'active' : 'completed')}</td>
+      <td style="font-size:0.75rem;white-space:nowrap;">${item.date}</td>
+      <td style="font-size:0.8rem;">${site?.name || '—'}</td>
+      <td><div class="user-cell">${avatarEl(reporter,24)}<span style="font-size:0.78rem;">${reporter?.name || 'System'}</span></div></td>
+      <td><span class="badge b-update"><i class="fas ${icon}"></i> ${item.type}</span></td>
+      <td>${severityBadge(item.severity)}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.8rem;" title="${escapeHtml(item.desc||'')}">${shortDesc}</td>
+      <td>${statusBadge(item.status === 'open' ? 'active' : 'completed')}</td>
       <td>
-        <button class="abt inf" onclick="toast('Incident details (demo)','info')"><i class="fas fa-eye"></i></button>
-        ${i.status === 'open' ? `<button class="abt suc" onclick="resolveIncident(${i.id})"><i class="fas fa-check"></i></button>` : ''}
+        <div style="display:flex;gap:0.2rem;">
+          <button class="abt inf" title="View Detail" onclick="viewSafetyDetail(${item.id})"><i class="fas fa-eye"></i></button>
+          ${item.status === 'open' ? `<button class="abt suc" title="Resolve" onclick="resolveSafetyItem(${item.id})"><i class="fas fa-check"></i></button>` : ''}
+          <button class="abt dan" title="Delete" onclick="deleteSafetyItem(${item.id})"><i class="fas fa-trash"></i></button>
+        </div>
       </td>
     </tr>`;
   }).join('');
 }
-
-function renderIncidentTable() { filterAndUpdateIncidents(); }
-
-function saveIncident() {
-  const data = { date: $('inc_date')?.value || nowStr(), siteId: +$('inc_site')?.value || 1, reporterId: currentUser.id, type: $('inc_type')?.value, severity: $('inc_severity')?.value, desc: $('inc_desc')?.value.trim(), actions: $('inc_actions')?.value.trim(), status: 'open' };
-  if (!data.desc) { toast('Description required', 'error'); return; }
-  DB.incidents.unshift({ id: generateId('incidents'), ...data });
-  logAction('create', 'Incident', `${data.severity} incident at site #${data.siteId}`);
-  if (data.severity === 'critical') sendEmail('admin@nixers.pro', 'CRITICAL: Safety Incident Reported', 'incident_alert');
-  closeM('incidentModal'); filterAndUpdateIncidents(); filterAndUpdateHazards(); toast('Incident reported', 'success');
+ 
+/* ── Helper: escape HTML ───────────────────────────────────── */
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
-
-function resolveIncident(id) {
-  const i = DB.incidents.find(x => x.id === id);
-  if (i) i.status = 'resolved';
-  filterAndUpdateIncidents(); filterAndUpdateHazards(); toast('Incident resolved', 'success');
+ 
+/* ── View detail in beautiful modal (matches other popups) ──── */
+function viewSafetyDetail(id) {
+  const item = (DB.incidents || []).find(x => x.id === id); 
+  if (!item) return;
+  
+  const site = siteById(item.siteId);
+  const reporter = userById(item.reporterId);
+  
+  // Get status badge HTML
+  const statusHtml = item.status === 'open' 
+    ? '<span class="badge" style="background:rgba(234,179,8,0.15);color:#eab308;"><i class="fas fa-circle" style="font-size:0.65rem;"></i> Open</span>'
+    : '<span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981;"><i class="fas fa-check-circle"></i> Resolved</span>';
+  
+  // Get severity badge HTML
+  let severityColor = '';
+  let severityIcon = '';
+  switch(item.severity) {
+    case 'critical': severityColor = '#ef4444'; severityIcon = 'fa-skull-crossbones'; break;
+    case 'high': severityColor = '#f97316'; severityIcon = 'fa-exclamation-triangle'; break;
+    case 'medium': severityColor = '#eab308'; severityIcon = 'fa-chart-line'; break;
+    default: severityColor = '#10b981'; severityIcon = 'fa-circle-info';
+  }
+  const severityHtml = `<span class="badge" style="background:${severityColor}22;color:${severityColor};"><i class="fas ${severityIcon}"></i> ${item.severity.toUpperCase()}</span>`;
+  
+  // Get type icon
+  const typeIcons = { 
+    injury: 'fa-user-injured', 
+    'near-miss': 'fa-eye', 
+    property: 'fa-building', 
+    hazard: 'fa-bug', 
+    fire: 'fa-fire', 
+    other: 'fa-circle-info' 
+  };
+  const typeIcon = typeIcons[item.type] || 'fa-circle-info';
+  
+  // Build modal content
+  const modalBody = `
+    <div style="display:flex;flex-direction:column;gap:1.25rem;">
+      <!-- Header with title and status -->
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          <div style="width:48px;height:48px;background:${severityColor}22;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+            <i class="fas ${typeIcon}" style="font-size:1.5rem;color:${severityColor};"></i>
+          </div>
+          <div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.1rem;">${item.type.charAt(0).toUpperCase() + item.type.slice(1)}</div>
+            <div style="font-size:0.72rem;color:var(--text3);">ID: #${String(item.id).padStart(4, '0')}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:0.5rem;">
+          ${severityHtml}
+          ${statusHtml}
+        </div>
+      </div>
+      
+      <!-- Info grid (2 columns) -->
+      <div class="info-grid" style="grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+        <div class="info-item">
+          <div class="il" style="color:var(--text3);font-size:0.72rem;">Date &amp; Time</div>
+          <div class="iv" style="font-size:0.9rem;font-weight:500;">${item.date}</div>
+        </div>
+        <div class="info-item">
+          <div class="il" style="color:var(--text3);font-size:0.72rem;">Site</div>
+          <div class="iv" style="font-size:0.9rem;font-weight:500;">${site?.name || '—'}</div>
+        </div>
+        <div class="info-item">
+          <div class="il" style="color:var(--text3);font-size:0.72rem;">Reported By</div>
+          <div class="iv" style="display:flex;align-items:center;gap:0.5rem;">
+            ${avatarEl(reporter, 28)} 
+            <span style="font-size:0.9rem;font-weight:500;">${reporter?.name || 'System'}</span>
+          </div>
+        </div>
+        <div class="info-item">
+          <div class="il" style="color:var(--text3);font-size:0.72rem;">Reported At</div>
+          <div class="iv" style="font-size:0.9rem;font-weight:500;">${item.date}</div>
+        </div>
+      </div>
+      
+      <!-- Description section -->
+      <div style="background:var(--surface2);border-radius:12px;padding:1rem;">
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
+          <i class="fas fa-file-alt" style="color:var(--accent);font-size:0.85rem;"></i>
+          <span style="font-weight:600;font-size:0.85rem;">Description</span>
+        </div>
+        <div style="font-size:0.85rem;line-height:1.5;color:var(--text2);white-space:pre-wrap;">${escapeHtml(item.desc)}</div>
+      </div>
+      
+      <!-- Actions section -->
+      <div style="background:var(--surface2);border-radius:12px;padding:1rem;">
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
+          <i class="fas fa-clipboard-list" style="color:var(--accent);font-size:0.85rem;"></i>
+          <span style="font-weight:600;font-size:0.85rem;">Immediate Actions Taken</span>
+        </div>
+        <div style="font-size:0.85rem;line-height:1.5;color:var(--text2);white-space:pre-wrap;">${item.actions || 'No actions reported'}</div>
+      </div>
+      
+      <!-- Timeline / Activity -->
+      <div style="background:var(--surface2);border-radius:12px;padding:1rem;">
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
+          <i class="fas fa-history" style="color:var(--accent);font-size:0.85rem;"></i>
+          <span style="font-weight:600;font-size:0.85rem;">Activity Timeline</span>
+        </div>
+        <div style="font-size:0.8rem;color:var(--text3);">
+          <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border);">
+            <span><i class="fas fa-flag-checkered"></i> Reported</span>
+            <span>${item.date}</span>
+          </div>
+          ${item.status === 'resolved' ? `
+          <div style="display:flex;justify-content:space-between;padding:0.5rem 0;">
+            <span><i class="fas fa-check-circle" style="color:#10b981;"></i> Resolved</span>
+            <span>${item.resolvedAt || item.date}</span>
+          </div>` : ''}
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Set modal content
+  const bodyEl = $('safetyDetailBody');
+  if (bodyEl) bodyEl.innerHTML = modalBody;
+  
+  // Set title
+  const titleEl = $('sdTitle');
+  if (titleEl) titleEl.textContent = `${item.type.charAt(0).toUpperCase() + item.type.slice(1)} Details`;
+  
+  // Configure action buttons
+  const resolveBtn = $('safetyDetailResolveBtn');
+  const deleteBtn = $('safetyDetailDeleteBtn');
+  
+  if (resolveBtn) {
+    if (item.status === 'open') {
+      resolveBtn.style.display = '';
+      const newResolveBtn = resolveBtn.cloneNode(true);
+      resolveBtn.parentNode.replaceChild(newResolveBtn, resolveBtn);
+      newResolveBtn.addEventListener('click', () => {
+        closeM('safetyDetailModal');
+        resolveSafetyItem(id);
+      });
+    } else {
+      resolveBtn.style.display = 'none';
+    }
+  }
+  
+  if (deleteBtn) {
+    deleteBtn.style.display = '';
+    const newDeleteBtn = deleteBtn.cloneNode(true);
+    deleteBtn.parentNode.replaceChild(newDeleteBtn, deleteBtn);
+    newDeleteBtn.addEventListener('click', () => {
+      closeM('safetyDetailModal');
+      deleteSafetyItem(id);
+    });
+  }
+  
+  openM('safetyDetailModal');
 }
-
+ 
+/* ── Resolve / Delete ──────────────────────────────────────── */
+function resolveSafetyItem(id, closeModal = true) {
+  if (!confirm('Mark this item as resolved?')) return;
+  const item = (DB.incidents || []).find(x => x.id === id); 
+  if (!item) return;
+  item.status = 'resolved';
+  item.resolvedAt = nowStr();
+  logAction('update', `Safety Issue #${id}`, `Resolved: ${item.type}`);
+  filterAndUpdateMergedSafety();
+  renderSafetyOverview();
+  renderSafetyScores();
+  toast('Item marked as resolved', 'success');
+}
+ 
+function deleteSafetyItem(id, closeModal = true) {
+  if (!confirm('⚠️ Permanently delete this record?')) return;
+  const idx = (DB.incidents || []).findIndex(x => x.id === id);
+  if (idx > -1) {
+    const item = DB.incidents[idx];
+    DB.incidents.splice(idx, 1);
+    logAction('delete', `Safety Issue #${id}`, `Deleted: ${item.type}`);
+  }
+  filterAndUpdateMergedSafety();
+  renderSafetyOverview();
+  renderSafetyScores();
+  toast('Record deleted', 'success');
+}
+ 
+/* ── Inductions ────────────────────────────────────────────── */
+function filterAndUpdateInductions() {
+  const q  = ($('indSearch')?.value  || '').toLowerCase();
+  const st = $('indStatus')?.value   || '';
+  const statusMap = ['Inducted','Pending Review','In Progress','Not Started','Expired'];
+  const rows = DB.users
+    .filter(u => u.role !== 'admin')
+    .map((u, idx) => ({
+      user:    u,
+      company: siteById(DB.sites[idx % DB.sites.length]?.id)?.name || 'Main Contractor',
+      status:  statusMap[idx % statusMap.length],
+      updated: nowStr().slice(0,10),
+    }))
+    .filter(r =>
+      (!q  || r.user.name.toLowerCase().includes(q) || r.company.toLowerCase().includes(q)) &&
+      (!st || r.status === st)
+    );
+  createPaginator('indTbody', rows, renderInductionsBody, { perPage: 10 });
+}
+ 
+function renderInductionsBody(rows) {
+  const tbody = $('indTbody'); if (!tbody) return;
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><i class="fas fa-id-card"></i>No inductions found</div>NonNullable<tr></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(r => {
+    const stKey = r.status === 'Inducted' ? 'active' : r.status === 'Expired' ? 'inactive' : 'pending';
+    return `<tr>
+      <td><div class="user-cell">${avatarEl(r.user,26)}<span>${r.user.name}</span></div></td>
+      <td>${r.company}</td>
+      <td>${statusBadge(stKey)}</td>
+      <td style="font-size:0.76rem;">${r.updated}</td>
+    </tr>`;
+  }).join('');
+}
+ 
+/* ── Training ──────────────────────────────────────────────── */
 function filterAndUpdateTraining() {
   const trainings = [
-    { userId: 3, training: 'Working at Height', completed: '2025-01-15', expiry: '2026-01-15', status: 'valid' },
-    { userId: 4, training: 'First Aid',          completed: '2024-06-01', expiry: '2025-06-01', status: 'expired' },
-    { userId: 5, training: 'Fire Safety',        completed: '2025-03-10', expiry: '2026-03-10', status: 'valid' },
-    { userId: 6, training: 'Scaffolding Safety', completed: '2025-02-20', expiry: '2026-02-20', status: 'valid' },
+    { userId:3, training:'Working at Height', completed:'2025-01-15', expiry:'2026-01-15', status:'valid' },
+    { userId:4, training:'First Aid',         completed:'2024-06-01', expiry:'2025-06-01', status:'expired' },
+    { userId:5, training:'Fire Safety',       completed:'2025-03-10', expiry:'2026-03-10', status:'valid' },
+    { userId:6, training:'Scaffolding Safety',completed:'2025-02-20', expiry:'2026-02-20', status:'valid' },
   ];
   createPaginator('trainingTbody', trainings, renderTrainingBody, { perPage: 10 });
 }
-
-function renderTrainingBody(trainings) {
-  if (!trainings.length) { $('trainingTbody').innerHTML = '<tr><td colspan="6"><div class="empty-state"><i class="fas fa-graduation-cap"></i>No training records found</div></td></tr>'; return; }
-  $('trainingTbody').innerHTML = trainings.map(t => {
+ 
+function renderTrainingBody(rows) {
+  const tbody = $('trainingTbody'); if (!tbody) return;
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><i class="fas fa-graduation-cap"></i>No training records found</div>NonNullable</tr></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(t => {
     const u = userById(t.userId);
     return `<tr>
-      <td><div class="user-cell">${avatarEl(u, 26)}<span>${u?.name}</span></div></td>
+      <td><div class="user-cell">${avatarEl(u,26)}<span>${u?.name||'?'}</span></div></td>
       <td>${t.training}</td>
       <td style="font-size:0.75rem;">${fmt(t.completed)}</td>
       <td style="font-size:0.75rem;">${fmt(t.expiry)}</td>
       <td>${statusBadge(t.status === 'valid' ? 'active' : 'inactive')}</td>
-      <td><button class="abt warn" onclick="editTraining(${t.userId})"><i class="fas fa-pen"></i></button></td>
+      <td><button class="abt warn" onclick="toast('Edit training #${t.userId} (demo)','info')"><i class="fas fa-pen"></i></button></td>
     </tr>`;
   }).join('');
 }
-
-function editTraining(userId) { toast(`Edit training record for user #${userId} (demo)`, 'info'); }
-
+ 
+/* ── Daily Checklist ───────────────────────────────────────── */
 function renderChecklist() {
-  const checks = ['All workers have PPE','Emergency exits clear','Scaffolding inspected','Tools accounted for','First aid kit stocked','Hazard zones marked','Morning briefing done'];
-  $('checklistBody').innerHTML = checks.map((c, i) => `
-    <div class="sw-row">
-      <div class="sw-info"><div class="sw-label">${c}</div></div>
-      <label class="sw"><input type="checkbox" id="chk${i}"><span class="sw-sl"></span></label>
-    </div>`).join('') +
-    `<div style="margin-top:1rem;"><button class="btn btn-accent btn-sm" onclick="submitChecklist()"><i class="fas fa-save"></i> Submit Checklist</button></div>`;
+  const el = $('checklistBody'); if (!el) return;
+  const items = [
+    'All workers have PPE','Emergency exits clear',
+    'Scaffolding inspected','Tools accounted for',
+    'First aid kit stocked','Hazard zones marked',
+    'Morning briefing done',
+  ];
+  el.innerHTML = `<div style="display:grid;gap:0.75rem;">${
+    items.map((c, i) => `
+      <div class="sw-row">
+        <div class="sw-info"><div class="sw-label">${c}</div></div>
+        <label class="sw"><input type="checkbox" id="chk${i}"><span class="sw-sl"></span></label>
+      </div>`).join('')
+  }</div>
+  <button class="btn btn-accent btn-sm" style="margin-top:1rem;" onclick="submitChecklist()">
+    <i class="fas fa-save"></i> Submit Checklist
+  </button>`;
 }
-
-function submitChecklist() { logAction('create', 'Checklist', 'Daily safety checklist submitted'); toast('Checklist submitted', 'success'); }
-
+ 
+function submitChecklist() {
+  logAction('create', 'Checklist', 'Daily safety checklist submitted');
+  toast('Checklist submitted', 'success');
+}
+ 
+/* ── Safety Scores ─────────────────────────────────────────── */
 function renderSafetyScores() {
-  $('safetyScoreBody').innerHTML = DB.sites.map(s => {
-    const incidents = DB.incidents.filter(i => i.siteId === s.id);
-    const score = Math.max(0, 100 - incidents.length * 15);
-    const color = score >= 80 ? '#34d399' : (score >= 60 ? 'var(--accent)' : '#f87171');
-    return `<div class="safety-score-card">
-      <div class="ss-site">${s.name}</div>
-      <div style="display:flex;align-items:center;gap:1rem;">
-        <div class="ss-score" style="color:${color};">${score}</div>
-        <div style="flex:1;"><div class="pb ss-bar"><div class="pb-fill" style="width:${score}%;background:${color};"></div></div><div style="font-size:0.72rem;color:var(--text3);margin-top:0.25rem;">${incidents.length} incident${incidents.length !== 1 ? 's' : ''} recorded</div></div>
+  const el = $('safetyScoreBody'); if (!el) return;
+  if (!DB.sites.length) { el.innerHTML = '<div class="empty-state"><i class="fas fa-star"></i>No sites found</div>'; return; }
+  el.innerHTML = DB.sites.map(s => {
+    const inc   = (DB.incidents || []).filter(i => i.siteId === s.id);
+    const score = Math.max(0, 100 - inc.filter(i=>i.status==='open').length * 15 - inc.filter(i=>i.severity==='critical').length * 25);
+    const color = score >= 80 ? '#34d399' : score >= 60 ? '#eab308' : '#f87171';
+    return `<div class="safety-score-card" style="display:flex;align-items:center;gap:1rem;padding:0.75rem 0;border-bottom:1px solid var(--border);">
+      <div style="flex:1;font-weight:500;font-size:0.85rem;">${s.name}</div>
+      <div style="flex:2;display:flex;align-items:center;gap:0.75rem;">
+        <div class="pb" style="flex:1;height:8px;"><div class="pb-fill" style="width:${score}%;background:${color};"></div></div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;color:${color};width:36px;text-align:right;">${score}</div>
       </div>
+      <div style="font-size:0.72rem;color:var(--text3);width:100px;">${inc.length} incident${inc.length !== 1 ? 's' : ''}</div>
     </div>`;
-  }).join('') || '<div class="empty-state"><i class="fas fa-star"></i>No sites found</div>';
+  }).join('');
 }
-
-function generateSafetyExport() {
+ 
+/* ── Export Reports ────────────────────────────────────────── */
+function generateSafetyReport() {
   const type = $('safeRptType')?.value;
-  const fmt  = $('safeRptFmt')?.value || 'csv';
-  if (!type) { toast('Select report type', 'error'); return; }
-  if (type === 'incidents' || type === 'hazards') {
-    if (fmt === 'json') downloadJSON(DB.incidents, `${type}.json`);
-    else exportCSV(DB.incidents, `${type}.csv`);
-  } else {
-    const rows = DB.users.filter(u => u.role !== 'admin').map((u, idx) => ({ name: u.name, status: ['Inducted','Pending Review','In Progress','Not Started','Expired'][idx % 5] }));
-    if (fmt === 'json') downloadJSON(rows, 'inductions.json');
-    else exportCSV(rows, 'inductions.csv');
+  const fmt_ = $('safeRptFmt')?.value  || 'csv';
+  if (!type) { toast('Select a report type', 'warn'); return; }
+ 
+  let data = [];
+  if (type === 'incidents') {
+    data = (DB.incidents || []).map(i => ({
+      Date:        i.date,
+      Site:        siteById(i.siteId)?.name || '—',
+      Type:        i.type,
+      Severity:    i.severity,
+      Description: i.desc,
+      Actions:     i.actions || '',
+      Status:      i.status,
+      Reporter:    userById(i.reporterId)?.name || 'System',
+    }));
+  } else if (type === 'inductions') {
+    const statusMap = ['Inducted','Pending Review','In Progress','Not Started','Expired'];
+    data = DB.users.filter(u => u.role !== 'admin').map((u, idx) => ({
+      Name:   u.name,
+      Email:  u.email,
+      Status: statusMap[idx % statusMap.length],
+      Date:   nowStr().slice(0,10),
+    }));
   }
-  toast('Safety export generated', 'success');
+ 
+  if (!data.length) { toast('No data to export', 'warn'); return; }
+ 
+  if (fmt_ === 'json') {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `safety-${type}.json`; a.click();
+    URL.revokeObjectURL(a.href);
+  } else {
+    exportCSV(data, `safety-${type}.csv`);
+  }
+  toast(`Export generated (${fmt_.toUpperCase()})`, 'success');
 }
-
 /* ============================================================
    26. AUDIT LOG
    ============================================================ */
